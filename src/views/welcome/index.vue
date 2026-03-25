@@ -1,9 +1,140 @@
 <script setup lang="ts">
+import { computed, defineAsyncComponent, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { message } from "../../utils/message";
+import {
+  getLatestRankedNews,
+  getTrendingTopics,
+  type NewsItem,
+  type Topic
+} from "../../api/sentiment";
+
+const NewsPanel = defineAsyncComponent(
+  () => import("../../components/NewsPanel.vue") as Promise<any>
+);
+const TopicPanel = defineAsyncComponent(
+  () => import("../../components/TopicPanel.vue") as Promise<any>
+);
+
 defineOptions({
   name: "Welcome"
+});
+
+type SourceNewsGroup = {
+  sourceId: string;
+  sourceName: string;
+  items: NewsItem[];
+};
+
+const loading = ref(false);
+const sourceNewsMap = ref<Record<string, NewsItem[]>>({});
+const topics = ref<Topic[]>([]);
+const router = useRouter();
+
+
+
+const sourceGroups = computed<SourceNewsGroup[]>(() => {
+  return Object.entries(sourceNewsMap.value)
+    .map(([sourceId, items]) => ({
+      sourceId,
+      sourceName: items[0]?.source_name || sourceId,
+      items
+    }))
+    .sort((a, b) => b.items.length - a.items.length);
+});
+
+const totalNewsCount = computed(() => {
+  return sourceGroups.value.reduce((sum, group) => sum + group.items.length, 0);
+});
+
+async function loadDashboardData() {
+  loading.value = true;
+  try {
+    const newsRes = await getLatestRankedNews().catch(() => null);
+    if (!newsRes) {
+      throw new Error("获取新闻数据失败");
+    }
+    if (!newsRes.success) {
+      throw new Error(newsRes.error_message || "获取新闻数据失败");
+    }
+    sourceNewsMap.value = newsRes.data;
+
+    const topicsRes = await getTrendingTopics().catch(() => null);
+    if (!topicsRes) {
+      message("获取热门话题失败", { type: "warning" });
+      topics.value = [];
+    } else if (!topicsRes.success) {
+      message(topicsRes.error_message || "获取热门话题失败", { type: "warning" });
+      topics.value = [];
+    } else {
+      topics.value = Array.isArray(topicsRes.data) ? topicsRes.data : [];
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "数据加载失败";
+    message(errorMessage, { type: "error" });
+    sourceNewsMap.value = {};
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleTopicSelect(topic: Topic) {
+  router.push({
+    path: "/topic",
+    query: {
+      topic: topic.topic
+    }
+  });
+}
+
+onMounted(() => {
+  loadDashboardData();
 });
 </script>
 
 <template>
-  <h1>Pure-Admin-Thin（非国际化版本）</h1>
+  <div v-loading="loading" class="welcome-page">
+    <div class="page-header">
+      <h2 class="page-title">舆情看板</h2>
+      <el-tag type="info" effect="plain">
+        来源 {{ sourceGroups.length }} 个 | 新闻 {{ totalNewsCount }} 条 | 话题 {{ topics.length }} 个
+      </el-tag>
+    </div>
+
+    <div class="dashboard-layout">
+      <NewsPanel :loading="loading" :groups="sourceGroups" @refresh="loadDashboardData" />
+      <TopicPanel :loading="loading" :topics="topics" @select="handleTopicSelect" />
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.welcome-page {
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 992px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

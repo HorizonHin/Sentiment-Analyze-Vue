@@ -20,6 +20,15 @@ export default {
         title: "首页",
         showLink: VITE_HIDE_HOME === "true" ? false : true
       }
+    },
+    {
+      path: "/topic",
+      name: "TopicView",
+      component: () => import("@/views/topic/index.vue"),
+      meta: {
+        title: "话题详情",
+        showLink: true
+      }
     }
   ]
 } satisfies RouteConfigsTable;
