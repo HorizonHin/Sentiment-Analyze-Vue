@@ -18,6 +18,7 @@ export default {
       component: () => import("@/views/welcome/index.vue"),
       meta: {
         title: "首页",
+        keepAlive: true,
         showLink: VITE_HIDE_HOME === "true" ? false : true
       }
     },
@@ -27,7 +28,7 @@ export default {
       component: () => import("@/views/topic/index.vue"),
       meta: {
         title: "话题详情",
-        showLink: true
+        showLink: false
       }
     }
   ]

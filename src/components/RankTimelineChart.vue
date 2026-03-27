@@ -1,7 +1,19 @@
 <script setup lang="ts">
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from "vue";
 import type * as echarts from "echarts";
 import type { NewsItem } from "../api/sentiment";
+import {
+  formatDateTimeYmdHm,
+  formatTimestampToMilliseconds
+} from "../common/const";
 
 defineOptions({
   name: "RankTimelineChart"
@@ -15,16 +27,24 @@ const chartRef = ref<HTMLElement>();
 const $echarts = (getCurrentInstance()?.proxy as any)?.$echarts;
 let chartInstance: ReturnType<typeof echarts.init> | null = null;
 
+function formatTimelineLabel(value: number | string): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  return formatDateTimeYmdHm(numeric);
+}
+
 const timelineData = computed(() => {
   const sorted = [...(props.item.rank_timeline || [])].sort((a, b) => {
-    const timeA = new Date(a.time).getTime();
-    const timeB = new Date(b.time).getTime();
+    const timeA = formatTimestampToMilliseconds(a.time);
+    const timeB = formatTimestampToMilliseconds(b.time);
     return timeA - timeB;
   });
 
   return sorted
     .map(item => ({
-      time: new Date(item.time).getTime(),
+      time: formatTimestampToMilliseconds(item.time),
       rank: item.rank || 0
     }))
     .filter(point => !Number.isNaN(point.time));
@@ -51,15 +71,12 @@ function renderChart() {
       formatter: (params: any) => {
         const points = Array.isArray(params) ? params : [params];
         const axisValue = points[0]?.axisValue;
-        const timeLabel = new Date(axisValue).toLocaleString("zh-CN", {
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
+        const timeLabel = formatTimelineLabel(axisValue);
 
         const seriesText = points.map(point => {
-          const value = Array.isArray(point.value) ? point.value[1] : point.value;
+          const value = Array.isArray(point.value)
+            ? point.value[1]
+            : point.value;
           return `${point.marker}${point.seriesName}: ${value ?? "-"}`;
         });
 
@@ -94,13 +111,7 @@ function renderChart() {
       },
       axisLabel: {
         rotate: 45,
-        formatter: (value: number) =>
-          new Date(value).toLocaleString("zh-CN", {
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit"
-          })
+        formatter: (value: number) => formatTimelineLabel(value)
       }
     },
     yAxis: {
@@ -149,7 +160,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="chartRef" class="chart"></div>
+  <div ref="chartRef" class="chart" />
 </template>
 
 <style scoped>

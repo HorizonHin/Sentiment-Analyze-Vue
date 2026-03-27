@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, ref } from "vue";
 import type { Topic } from "../api/sentiment";
 
 defineOptions({
@@ -19,6 +19,22 @@ const TopicCard = defineAsyncComponent(
   () => import("./TopicCard.vue") as Promise<any>
 );
 
+type TopicSortMode = "total_weight" | "heat_change_percent";
+
+const sortMode = ref<TopicSortMode>("total_weight");
+
+const sortedTopics = computed<Topic[]>(() => {
+  const list = [...(props.topics || [])];
+  const mode = sortMode.value;
+
+  return list.sort((a, b) => {
+    if (mode === "heat_change_percent") {
+      return (b.heat_change_percent || 0) - (a.heat_change_percent || 0);
+    }
+    return (b.total_weight || 0) - (a.total_weight || 0);
+  });
+});
+
 function handleSelect(topic: Topic) {
   emit("select", topic);
 }
@@ -28,14 +44,21 @@ function handleSelect(topic: Topic) {
   <aside class="topic-panel">
     <div class="section-header">
       <h3>热门 Topic</h3>
+      <el-select v-model="sortMode" size="small" class="sort-select">
+        <el-option label="按热度排序" value="total_weight" />
+        <el-option label="按热度变化排序" value="heat_change_percent" />
+      </el-select>
     </div>
 
-    <el-empty v-if="!topics.length && !loading" description="暂无话题数据" />
+    <el-empty
+      v-if="!sortedTopics.length && !loading"
+      description="暂无话题数据"
+    />
 
     <el-scrollbar v-else max-height="560px" class="topic-scrollbar">
       <div class="topic-list">
         <div
-          v-for="topicItem in topics"
+          v-for="topicItem in sortedTopics"
           :key="`${topicItem.id}-${topicItem.topic}`"
           class="topic-clickable-item"
           role="button"
@@ -58,8 +81,8 @@ function handleSelect(topic: Topic) {
 
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -70,6 +93,10 @@ function handleSelect(topic: Topic) {
 
 .topic-scrollbar {
   padding-right: 4px;
+}
+
+.sort-select {
+  width: 152px;
 }
 
 .topic-list {

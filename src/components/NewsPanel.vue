@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, getCurrentInstance } from "vue";
 import type { NewsItem } from "../api/sentiment";
 
 defineOptions({
@@ -17,6 +17,12 @@ const props = defineProps<{
   groups: SourceNewsGroup[];
 }>();
 
+const emit = defineEmits<{
+  (event: "refresh"): void;
+}>();
+
+const instance = getCurrentInstance();
+
 const NewsItemCard = defineAsyncComponent(
   () => import("./NewsItemCard.vue") as Promise<any>
 );
@@ -25,14 +31,29 @@ const limitedGroups = computed(() => {
   return props.groups.map(group => ({
     ...group,
     items: [...group.items].sort((a, b) => {
-      const rankA = Number.isFinite(a.latest_rank) ? a.latest_rank : Number.MAX_SAFE_INTEGER;
-      const rankB = Number.isFinite(b.latest_rank) ? b.latest_rank : Number.MAX_SAFE_INTEGER;
+      const rankA = Number.isFinite(a.latest_rank)
+        ? a.latest_rank
+        : Number.MAX_SAFE_INTEGER;
+      const rankB = Number.isFinite(b.latest_rank)
+        ? b.latest_rank
+        : Number.MAX_SAFE_INTEGER;
       return rankA - rankB;
     })
   }));
 });
 
-function displayRank(rank: number | string | undefined, fallbackIndex: number): string {
+const showRefreshButton = computed(() => {
+  const handler = instance?.vnode.props?.onRefresh;
+  if (Array.isArray(handler)) {
+    return handler.length > 0;
+  }
+  return typeof handler === "function";
+});
+
+function displayRank(
+  rank: number | string | undefined,
+  fallbackIndex: number
+): string {
   if (typeof rank === "number" && Number.isFinite(rank)) {
     return String(rank);
   }
@@ -41,12 +62,24 @@ function displayRank(rank: number | string | undefined, fallbackIndex: number): 
   }
   return String(fallbackIndex + 1);
 }
+
+function handleRefresh() {
+  emit("refresh");
+}
 </script>
 
 <template>
   <section class="news-panel">
     <div class="section-header">
       <h3>按来源展示 NewsItem</h3>
+      <el-button
+        v-if="showRefreshButton"
+        size="small"
+        :loading="loading"
+        @click="handleRefresh"
+      >
+        刷新
+      </el-button>
     </div>
 
     <el-empty v-if="!groups.length && !loading" description="暂无新闻数据" />
@@ -61,7 +94,9 @@ function displayRank(rank: number | string | undefined, fallbackIndex: number): 
         <template #header>
           <div class="group-header">
             <span class="group-title">{{ group.sourceName }}</span>
-            <el-tag size="small" type="primary" effect="plain">{{ group.items.length }} 条</el-tag>
+            <el-tag size="small" type="primary" effect="plain"
+              >{{ group.items.length }} 条</el-tag
+            >
           </div>
         </template>
 
@@ -87,8 +122,8 @@ function displayRank(rank: number | string | undefined, fallbackIndex: number): 
 
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -109,8 +144,8 @@ function displayRank(rank: number | string | undefined, fallbackIndex: number): 
 
 .group-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .group-title {
@@ -127,7 +162,7 @@ function displayRank(rank: number | string | undefined, fallbackIndex: number): 
   gap: 10px;
 }
 
-@media (max-width: 992px) {
+@media (width <= 992px) {
   .source-group-list {
     grid-template-columns: 1fr;
   }

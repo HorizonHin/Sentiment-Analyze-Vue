@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import {
+  formatHeatChangePercent,
+  formatDateTimeYmdHm,
+  formatWindowHourMinute,
+  getHeatChangeTagType,
+  getTopicStageMeta,
+  getSentimentPolarityColor
+} from "../common/const";
 import type { Topic } from "../api/sentiment";
 
 defineOptions({
@@ -20,6 +28,39 @@ const sentimentTagType = computed(() => {
   if (sentiment === "positive") return "success";
   if (sentiment === "negative") return "danger";
   return "warning";
+});
+
+const stageMeta = computed(() => getTopicStageMeta(props.topic.stage));
+const heatChangeText = computed(() =>
+  formatHeatChangePercent(props.topic.heat_change_percent)
+);
+const heatChangeTagType = computed(() =>
+  getHeatChangeTagType(props.topic.heat_change_percent)
+);
+
+const sourceNameMap = computed<Record<string, string>>(() => {
+  const rankData = props.topic.rank_data || {};
+  return Object.entries(rankData).reduce<Record<string, string>>(
+    (result, [sourceId, items]) => {
+      result[sourceId] = items[0]?.source_name || sourceId;
+      return result;
+    },
+    {}
+  );
+});
+
+const platformBars = computed(() => {
+  const list = props.topic.platform_distribution || [];
+  const maxVolume = Math.max(1, ...list.map(item => item.volume || 0));
+
+  return list.map(item => {
+    return {
+      ...item,
+      displayName: sourceNameMap.value[item.platform] || item.platform,
+      widthPercent: Math.max(2, (item.volume / maxVolume) * 100),
+      color: getSentimentPolarityColor(item.sentiment)
+    };
+  });
 });
 
 function handleSelect() {
@@ -43,7 +84,21 @@ function handleSelect() {
   >
     <div class="title-row">
       <h3 class="topic-name">{{ props.topic.topic || "Untitled Topic" }}</h3>
-      <el-tag size="small" :type="sentimentTagType">{{ props.topic.sentiment || "unknown" }}</el-tag>
+      <div class="tag-row">
+        <el-tag size="small" :type="sentimentTagType">{{
+          props.topic.sentiment || "unknown"
+        }}</el-tag>
+        <el-tag size="small" effect="plain" :type="stageMeta.tagType">{{
+          stageMeta.label
+        }}</el-tag>
+      </div>
+    </div>
+
+    <div class="heat-row">
+      <span class="label">Heat Change</span>
+      <el-tag size="small" :type="heatChangeTagType">{{
+        heatChangeText
+      }}</el-tag>
     </div>
 
     <div class="stats-row">
@@ -56,28 +111,40 @@ function handleSelect() {
         <span class="value">{{ props.topic.total_weight.toFixed(2) }}</span>
       </div>
       <div class="stats-item">
-        <span class="label">Window</span>
-        <span class="value">{{ props.topic.window_size }}m</span>
+        <span class="label">Hour Minute</span>
+        <span class="value">{{
+          formatWindowHourMinute(props.topic.window_size)
+        }}</span>
       </div>
     </div>
 
     <div class="time-row">
-      <span>{{ props.topic.start_time || "-" }}</span>
+      <span>{{ formatDateTimeYmdHm(props.topic.start_time) }}</span>
       <span>to</span>
-      <span>{{ props.topic.end_time || "-" }}</span>
+      <span>{{ formatDateTimeYmdHm(props.topic.end_time) }}</span>
     </div>
 
-    <div v-if="props.topic.platform_distribution?.length" class="platform-list">
+    <div v-if="platformBars.length" class="platform-list">
       <div
-        v-for="platform in props.topic.platform_distribution"
+        v-for="platform in platformBars"
         :key="platform.platform"
         class="platform-item"
       >
         <div class="platform-head">
-          <span>{{ platform.platform }}</span>
-          <span>{{ (platform.ratio * 100).toFixed(1) }}%</span>
+          <span>{{ platform.displayName }}</span>
+          <span
+            >{{ platform.volume }} | {{ platform.sentiment || "unknown" }}</span
+          >
         </div>
-        <el-progress :percentage="Math.min(100, Math.max(0, platform.ratio * 100))" :stroke-width="8" />
+        <div class="bar-track">
+          <div
+            class="bar-fill"
+            :style="{
+              width: `${platform.widthPercent}%`,
+              backgroundColor: platform.color
+            }"
+          />
+        </div>
       </div>
     </div>
   </el-card>
@@ -94,9 +161,22 @@ function handleSelect() {
 
 .title-row {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tag-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.heat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -122,22 +202,22 @@ function handleSelect() {
 }
 
 .label {
-  color: #7d8597;
   font-size: 12px;
+  color: #7d8597;
 }
 
 .value {
-  color: #222;
   font-size: 14px;
   font-weight: 600;
+  color: #222;
 }
 
 .time-row {
   display: flex;
   gap: 6px;
-  color: #5f6470;
-  font-size: 12px;
   margin-bottom: 12px;
+  font-size: 12px;
+  color: #5f6470;
 }
 
 .platform-list {
@@ -150,7 +230,21 @@ function handleSelect() {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
-  color: #2f3340;
   font-size: 13px;
+  color: #2f3340;
+}
+
+.bar-track {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  background: #eef1f6;
+  border-radius: 999px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }
 </style>

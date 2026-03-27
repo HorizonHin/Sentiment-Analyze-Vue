@@ -8,6 +8,7 @@ import {
   type NewsItem,
   type Topic
 } from "../../api/sentiment";
+import { useTopicStoreHook } from "@/store/modules/topic";
 
 const NewsPanel = defineAsyncComponent(
   () => import("../../components/NewsPanel.vue") as Promise<any>
@@ -30,8 +31,7 @@ const loading = ref(false);
 const sourceNewsMap = ref<Record<string, NewsItem[]>>({});
 const topics = ref<Topic[]>([]);
 const router = useRouter();
-
-
+const topicStore = useTopicStoreHook();
 
 const sourceGroups = computed<SourceNewsGroup[]>(() => {
   return Object.entries(sourceNewsMap.value)
@@ -64,13 +64,16 @@ async function loadDashboardData() {
       message("获取热门话题失败", { type: "warning" });
       topics.value = [];
     } else if (!topicsRes.success) {
-      message(topicsRes.error_message || "获取热门话题失败", { type: "warning" });
+      message(topicsRes.error_message || "获取热门话题失败", {
+        type: "warning"
+      });
       topics.value = [];
     } else {
       topics.value = Array.isArray(topicsRes.data) ? topicsRes.data : [];
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "数据加载失败";
+    const errorMessage =
+      error instanceof Error ? error.message : "数据加载失败";
     message(errorMessage, { type: "error" });
     sourceNewsMap.value = {};
   } finally {
@@ -79,10 +82,14 @@ async function loadDashboardData() {
 }
 
 function handleTopicSelect(topic: Topic) {
+  topicStore.setSelectedTopic(topic);
+  sessionStorage.setItem("_selectedTopic", JSON.stringify(topic));
   router.push({
     path: "/topic",
     query: {
-      topic: topic.topic
+      topic: topic.topic,
+      id: String(topic.id),
+      created_at: topic.created_at
     }
   });
 }
@@ -97,13 +104,22 @@ onMounted(() => {
     <div class="page-header">
       <h2 class="page-title">舆情看板</h2>
       <el-tag type="info" effect="plain">
-        来源 {{ sourceGroups.length }} 个 | 新闻 {{ totalNewsCount }} 条 | 话题 {{ topics.length }} 个
+        来源 {{ sourceGroups.length }} 个 | 新闻 {{ totalNewsCount }} 条 | 话题
+        {{ topics.length }} 个
       </el-tag>
     </div>
 
     <div class="dashboard-layout">
-      <NewsPanel :loading="loading" :groups="sourceGroups" @refresh="loadDashboardData" />
-      <TopicPanel :loading="loading" :topics="topics" @select="handleTopicSelect" />
+      <NewsPanel
+        :loading="loading"
+        :groups="sourceGroups"
+        @refresh="loadDashboardData"
+      />
+      <TopicPanel
+        :loading="loading"
+        :topics="topics"
+        @select="handleTopicSelect"
+      />
     </div>
   </div>
 </template>
@@ -115,9 +131,9 @@ onMounted(() => {
 
 .page-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 16px;
 }
 
@@ -132,7 +148,7 @@ onMounted(() => {
   gap: 16px;
 }
 
-@media (max-width: 992px) {
+@media (width <= 992px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
   }

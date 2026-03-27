@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from "vue";
 import type * as echarts from "echarts";
+import { getSentimentPolarityColor } from "../common/const";
 import type { NewsItem } from "../api/sentiment";
 
 defineOptions({
@@ -20,17 +29,17 @@ const pieChartData = computed(() => {
     {
       value: Math.round((props.item.positive_ratio || 0) * 100),
       name: "Positive",
-      itemStyle: { color: "#67c23a" }
+      itemStyle: { color: getSentimentPolarityColor("positive") }
     },
     {
       value: Math.round((props.item.negative_ratio || 0) * 100),
       name: "Negative",
-      itemStyle: { color: "#f56c6c" }
+      itemStyle: { color: getSentimentPolarityColor("negative") }
     },
     {
       value: Math.round((props.item.neutral_ratio || 0) * 100),
       name: "Neutral",
-      itemStyle: { color: "#909399" }
+      itemStyle: { color: getSentimentPolarityColor("neutral") }
     }
   ];
 });
@@ -94,7 +103,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="chartRef" class="chart"></div>
+  <div ref="chartRef" class="chart" />
 </template>
 
 <style scoped>

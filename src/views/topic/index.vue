@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getTrendingTopics, type NewsItem, type Topic } from "../../api/sentiment";
-import { message } from "../../utils/message";
+import {
+  formatHeatChangePercent,
+  formatDateTimeYmdHm,
+  formatWindowHourMinute,
+  getHeatChangeTagType,
+  getTopicStageMeta,
+  getSentimentPolarityColor
+} from "@/common/const";
+import {
+  getTopicSnapshotDetail,
+  type NewsItem,
+  type Topic
+} from "@/api/sentiment";
+import { message } from "@/utils/message";
+import { useTopicStoreHook } from "@/store/modules/topic";
 
 defineOptions({
   name: "TopicView"
@@ -12,9 +25,14 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const topicDetail = ref<Topic | null>(null);
+const topicTimeline = ref<Topic[]>([]);
+const topicStore = useTopicStoreHook();
 
 const NewsPanel = defineAsyncComponent(
-  () => import("../../components/NewsPanel.vue") as Promise<any>
+  () => import("@/components/NewsPanel.vue") as Promise<any>
+);
+const TopicHeatTimelineBarChart = defineAsyncComponent(
+  () => import("../../components/TopicHeatTimelineBarChart.vue") as Promise<any>
 );
 
 const topicKeyword = computed(() => {
@@ -29,21 +47,35 @@ const sentimentTagType = computed(() => {
   return "warning";
 });
 
+const stageMeta = computed(() => getTopicStageMeta(topicDetail.value?.stage));
+const heatChangeText = computed(() =>
+  formatHeatChangePercent(topicDetail.value?.heat_change_percent)
+);
+const heatChangeTagType = computed(() =>
+  getHeatChangeTagType(topicDetail.value?.heat_change_percent)
+);
+
+const sourceNameMap = computed<Record<string, string>>(() => {
+  const rankData = topicDetail.value?.rank_data || {};
+  return Object.entries(rankData).reduce<Record<string, string>>(
+    (result, [sourceId, items]) => {
+      result[sourceId] = items[0]?.source_name || sourceId;
+      return result;
+    },
+    {}
+  );
+});
+
 const platformBars = computed(() => {
   const list = topicDetail.value?.platform_distribution || [];
   const maxVolume = Math.max(1, ...list.map(item => item.volume || 0));
 
   return list.map(item => {
-    const sentiment = (item.sentiment || "").toLowerCase();
-    let color = "#909399";
-    if (sentiment === "positive") color = "#67c23a";
-    if (sentiment === "negative") color = "#f56c6c";
-    if (sentiment === "neutral") color = "#409eff";
-
     return {
       ...item,
+      displayName: sourceNameMap.value[item.platform] || item.platform,
       widthPercent: Math.max(2, (item.volume / maxVolume) * 100),
-      color
+      color: getSentimentPolarityColor(item.sentiment)
     };
   });
 });
@@ -63,37 +95,76 @@ const newsGroups = computed(() => {
 });
 
 async function loadTopicDetail() {
-  const keyword = topicKeyword.value;
-  if (!keyword) {
+  let defaultTopic = topicStore.getSelectedTopic;
+  if (!defaultTopic) {
+    const rawTopic = sessionStorage.getItem("_selectedTopic");
+    if (rawTopic) {
+      try {
+        defaultTopic = JSON.parse(rawTopic) as Topic;
+      } catch {
+        defaultTopic = null;
+      }
+    }
+  }
+
+  if (!defaultTopic) {
     topicDetail.value = null;
+    topicTimeline.value = [];
+    message("缺少 Topic 入参，请返回上一页重新选择", { type: "warning" });
+    return;
+  }
+
+  topicStore.setSelectedTopic(defaultTopic);
+  topicDetail.value = defaultTopic;
+  topicTimeline.value = [defaultTopic];
+  topicStore.clearSelectedTopic();
+  sessionStorage.removeItem("_selectedTopic");
+
+  const snapshotId =
+    typeof defaultTopic.id === "number" && Number.isFinite(defaultTopic.id)
+      ? defaultTopic.id
+      : null;
+  const snapshotCreatedAt =
+    typeof defaultTopic.created_at === "number" &&
+    Number.isFinite(defaultTopic.created_at)
+      ? defaultTopic.created_at
+      : null;
+
+  if (!snapshotCreatedAt || snapshotId === null) {
+    message("Topic 参数缺少 created_at 或 id，已展示默认 Topic", {
+      type: "warning"
+    });
     return;
   }
 
   loading.value = true;
   try {
-    const response = await getTrendingTopics().catch(() => null);
-    if (!response) {
-      throw new Error("获取话题详情失败");
+    const detailResponse = await getTopicSnapshotDetail({
+      created_at: snapshotCreatedAt,
+      id: snapshotId,
+      history_limit: 100
+    }).catch(() => null);
+
+    if (!detailResponse || !detailResponse.success) {
+      message(
+        detailResponse?.error_message || "获取话题时间线失败，已展示默认 Topic",
+        {
+          type: "warning"
+        }
+      );
+      return;
     }
 
-    if (!response.success) {
-      throw new Error(response.error_message || "获取话题详情失败");
-    }
-
-    const topics = Array.isArray(response.data) ? response.data : [];
-    const exactMatch = topics.find(item => item.topic === keyword);
-    const insensitiveMatch = exactMatch
-      ? exactMatch
-      : topics.find(item => item.topic.toLowerCase() === keyword.toLowerCase());
-
-    topicDetail.value = insensitiveMatch || null;
-    if (!topicDetail.value) {
-      message("未找到对应话题，请返回首页重新选择", { type: "warning" });
-    }
+    topicDetail.value = detailResponse.data?.topic || defaultTopic;
+    topicTimeline.value = Array.isArray(detailResponse.data?.timeline)
+      ? detailResponse.data.timeline
+      : [topicDetail.value || defaultTopic];
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "获取话题详情失败";
-    message(errorMessage, { type: "error" });
-    topicDetail.value = null;
+    const errorMessage =
+      error instanceof Error ? error.message : "获取话题详情失败";
+    message(`${errorMessage}，已展示默认 Topic`, { type: "warning" });
+    topicDetail.value = defaultTopic;
+    topicTimeline.value = [defaultTopic];
   } finally {
     loading.value = false;
   }
@@ -104,7 +175,7 @@ function goBack() {
 }
 
 watch(
-  () => route.query.topic,
+  () => route.fullPath,
   () => {
     loadTopicDetail();
   },
@@ -118,7 +189,9 @@ watch(
       <template #content>
         <div class="header-content">
           <span class="title">话题详情</span>
-          <el-tag v-if="topicKeyword" type="info" effect="plain">{{ topicKeyword }}</el-tag>
+          <el-tag v-if="topicKeyword" type="info" effect="plain">{{
+            topicKeyword
+          }}</el-tag>
         </div>
       </template>
     </el-page-header>
@@ -131,22 +204,65 @@ watch(
           <template #header>
             <div class="detail-header">
               <h3>{{ topicDetail.topic }}</h3>
-              <el-tag :type="sentimentTagType" effect="light">{{ topicDetail.sentiment || "unknown" }}</el-tag>
+              <div class="detail-tag-row">
+                <el-tag :type="sentimentTagType" effect="light">{{
+                  topicDetail.sentiment || "unknown"
+                }}</el-tag>
+                <el-tag :type="stageMeta.tagType" effect="plain">{{
+                  stageMeta.label
+                }}</el-tag>
+                <el-tag :type="heatChangeTagType" effect="light">{{
+                  heatChangeText
+                }}</el-tag>
+              </div>
             </div>
           </template>
 
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="ID">{{ topicDetail.id }}</el-descriptions-item>
-            <el-descriptions-item label="Version">{{ topicDetail.version }}</el-descriptions-item>
-            <el-descriptions-item label="News Count">{{ topicDetail.news_count }}</el-descriptions-item>
-            <el-descriptions-item label="Total Weight">{{ topicDetail.total_weight.toFixed(2) }}</el-descriptions-item>
-            <el-descriptions-item label="Window Size">{{ topicDetail.window_size }}m</el-descriptions-item>
-            <el-descriptions-item label="Sentiment">{{ topicDetail.sentiment || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="Start Time">{{ topicDetail.start_time || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="End Time">{{ topicDetail.end_time || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="Created At">{{ topicDetail.created_at || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="Updated At">{{ topicDetail.updated_at || "-" }}</el-descriptions-item>
+            <el-descriptions-item label="ID">{{
+              topicDetail.id
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Version">{{
+              topicDetail.version
+            }}</el-descriptions-item>
+            <el-descriptions-item label="News Count">{{
+              topicDetail.news_count
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Total Weight">{{
+              topicDetail.total_weight.toFixed(2)
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Heat Change">{{
+              heatChangeText
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Stage">{{
+              stageMeta.label
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Hour Minute">
+              {{ formatWindowHourMinute(topicDetail.window_size) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Sentiment">{{
+              topicDetail.sentiment || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Start Time">
+              {{ formatDateTimeYmdHm(topicDetail.start_time) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="End Time">
+              {{ formatDateTimeYmdHm(topicDetail.end_time) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Created At">
+              {{ formatDateTimeYmdHm(topicDetail.created_at) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Updated At">
+              {{ formatDateTimeYmdHm(topicDetail.updated_at) }}
+            </el-descriptions-item>
           </el-descriptions>
+        </el-card>
+
+        <el-card class="detail-card" shadow="never">
+          <template #header>
+            <div class="detail-title">Heat Timeline</div>
+          </template>
+          <TopicHeatTimelineBarChart :timeline="topicTimeline" />
         </el-card>
 
         <el-card class="detail-card" shadow="never">
@@ -154,15 +270,26 @@ watch(
             <div class="detail-title">Platform Distribution</div>
           </template>
           <div v-if="platformBars.length" class="platform-bars">
-            <div v-for="item in platformBars" :key="item.platform" class="platform-bar-row">
+            <div
+              v-for="item in platformBars"
+              :key="item.platform"
+              class="platform-bar-row"
+            >
               <div class="bar-head">
-                <span class="platform-name">{{ item.platform }}</span>
+                <span class="platform-name">{{ item.displayName }}</span>
                 <span class="platform-meta">
-                  {{ item.volume }} | {{ item.sentiment || "unknown" }} | {{ (item.ratio * 100).toFixed(2) }}%
+                  {{ item.volume }} | {{ item.sentiment || "unknown" }} |
+                  {{ (item.ratio * 100).toFixed(2) }}%
                 </span>
               </div>
               <div class="bar-track">
-                <div class="bar-fill" :style="{ width: `${item.widthPercent}%`, backgroundColor: item.color }"></div>
+                <div
+                  class="bar-fill"
+                  :style="{
+                    width: `${item.widthPercent}%`,
+                    backgroundColor: item.color
+                  }"
+                />
               </div>
             </div>
           </div>
@@ -171,7 +298,6 @@ watch(
 
         <div class="news-section-header">
           <div class="detail-title news-title">Rank Data (NewsPanel)</div>
-          <el-button size="small" :loading="loading" @click="loadTopicDetail">刷新 NewsPanel</el-button>
         </div>
         <NewsPanel :loading="loading" :groups="newsGroups" />
       </template>
@@ -186,8 +312,8 @@ watch(
 
 .header-content {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
 }
 
 .title {
@@ -196,10 +322,10 @@ watch(
 }
 
 .content-wrapper {
-  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-top: 16px;
 }
 
 .detail-card {
@@ -208,9 +334,15 @@ watch(
 
 .detail-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-tag-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .detail-header h3 {
@@ -237,9 +369,9 @@ watch(
 
 .bar-head {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
   align-items: center;
+  justify-content: space-between;
 }
 
 .platform-name {
@@ -248,16 +380,16 @@ watch(
 }
 
 .platform-meta {
-  color: #606266;
   font-size: 13px;
+  color: #606266;
 }
 
 .bar-track {
   width: 100%;
   height: 12px;
-  border-radius: 999px;
-  background: #eef1f6;
   overflow: hidden;
+  background: #eef1f6;
+  border-radius: 999px;
 }
 
 .bar-fill {
@@ -272,8 +404,8 @@ watch(
 
 .news-section-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  align-items: center;
+  justify-content: space-between;
 }
 </style>
