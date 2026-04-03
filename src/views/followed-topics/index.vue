@@ -120,7 +120,7 @@ function openTopicDetail(topic: Topic) {
   topicStore.setSelectedTopic(topic);
   sessionStorage.setItem("_selectedTopic", JSON.stringify(topic));
 
-  const { href } = router.resolve({
+  router.push({
     path: "/topic",
     query: {
       topic: topic.topic,
@@ -128,7 +128,6 @@ function openTopicDetail(topic: Topic) {
       created_at: topic.created_at
     }
   });
-  window.open(href, "_blank");
 }
 
 async function removeOne(keywordTerm: string) {
@@ -263,8 +262,10 @@ loadFollowedTopics();
           </div>
         </div>
 
-        <TopicCard v-if="item.topic" :topic="item.topic" :selectable="false" />
-        <el-empty v-else description="该关键词当前未解析到 Topic" />
+        <div class="topic-card-wrapper" @click="item.topic && openTopicDetail(item.topic)">
+          <TopicCard v-if="item.topic" :topic="item.topic" :selectable="false" />
+          <el-empty v-else description="该关键词当前未解析到 Topic" />
+        </div>
       </el-card>
     </div>
   </div>
@@ -303,6 +304,15 @@ loadFollowedTopics();
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 16px;
+}
+
+.topic-card-wrapper {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.topic-card-wrapper:hover {
+  opacity: 0.9;
 }
 
 .card-header {

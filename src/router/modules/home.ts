@@ -28,7 +28,8 @@ export default {
       component: () => import("@/views/topic/index.vue"),
       meta: {
         title: "话题详情",
-        showLink: false
+        showLink: false,
+        keepAlive: false
       }
     },
   ]

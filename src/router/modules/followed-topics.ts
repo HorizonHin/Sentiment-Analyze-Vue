@@ -6,6 +6,7 @@ export default {
     title: "关注话题",
     icon: "ep:star",
     showLink: true,
-    rank: 5
+    rank: 5,
+    keepAlive: true
   }
 } satisfies RouteConfigsTable;

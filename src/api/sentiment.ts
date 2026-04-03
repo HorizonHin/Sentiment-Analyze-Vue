@@ -275,3 +275,72 @@ export const deleteFollowedKeyword = (keyword_term: string) => {
     }
   );
 };
+
+export type TopicRiskWarning = {
+  topic_created_at: number;
+  topic_id: number;
+  topic_name: string;
+  risk_type: "negative_cluster" | "burst_event" | "cross_platform_gap" | string;
+  risk_level: "low" | "medium" | "high" | "critical" | string;
+  risk_score: number;
+  reason: string;
+  metrics: Record<string, any>;
+  detected_by_event: string;
+  occurred_at: number;
+};
+
+export type SensitiveTitleRecord = {
+  topic_created_at: number;
+  topic_id: number;
+  topic_name: string;
+  old_topic: string;
+  candidate_titles: string[];
+  reason: string;
+  risk_level: string;
+  occurred_at: number;
+  context: any;
+};
+
+/**
+ * Get topic risk warnings.
+ */
+export const getTopicRiskWarnings = (params?: {
+  topic_created_at?: number;
+  topic_id?: number;
+  start_time?: number;
+  end_time?: number;
+  risk_level?: string;
+  limit?: number;
+}) => {
+  return http.request<ApiResult<TopicRiskWarning[]>>(
+    "get",
+    "/api/risk/topic-warnings",
+    { params }
+  );
+};
+
+/**
+ * Get sensitive title audit records.
+ */
+export const getSensitiveTitleRecords = (params?: {
+  topic_created_at?: number;
+  topic_id?: number;
+  start_time?: number;
+  end_time?: number;
+  limit?: number;
+}) => {
+  return http.request<ApiResult<SensitiveTitleRecord[]>>(
+    "get",
+    "/api/risk/sensitive-title-audit",
+    { params }
+  );
+};
+
+/**
+ * Batch get topics by (created_at, id) keys.
+ */
+export const batchGetTopics = (keys: [number, number][]) => {
+  return http.request<TrendingTopicsResponse>("post", "/api/topics/batch-get", {
+    data: { keys }
+  });
+};

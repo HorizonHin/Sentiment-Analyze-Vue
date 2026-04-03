@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from "vue";
+import { useRouter } from "vue-router";
+import { useTopicStoreHook } from "@/store/modules/topic";
 import type { Topic } from "../api/sentiment";
 
 defineOptions({
@@ -14,7 +16,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: "select", topic: Topic): void;
+  (event: "follow", keyword: string): void;
 }>();
+
+const router = useRouter();
+const topicStore = useTopicStoreHook();
 
 const TopicCard = defineAsyncComponent(
   () => import("./TopicCard.vue") as Promise<any>
@@ -37,7 +43,24 @@ const sortedTopics = computed<Topic[]>(() => {
 });
 
 function handleSelect(topic: Topic) {
+  // 统一跳转逻辑
+  topicStore.setSelectedTopic(topic);
+  sessionStorage.setItem("_selectedTopic", JSON.stringify(topic));
+
+  router.push({
+    path: "/topic",
+    query: {
+      topic: topic.topic,
+      id: String(topic.id),
+      created_at: topic.created_at
+    }
+  });
+
   emit("select", topic);
+}
+
+function handleFollow(keyword: string) {
+  emit("follow", keyword);
 }
 
 const topicListClass = computed(() => {
@@ -67,14 +90,29 @@ const topicListClass = computed(() => {
         <div
           v-for="topicItem in sortedTopics"
           :key="`${topicItem.id}-${topicItem.topic}`"
-          class="topic-clickable-item"
-          role="button"
-          tabindex="0"
-          @click="handleSelect(topicItem)"
-          @keyup.enter="handleSelect(topicItem)"
-          @keyup.space.prevent="handleSelect(topicItem)"
+          class="topic-item-wrapper"
         >
-          <TopicCard :topic="topicItem" :selectable="false" />
+          <div
+            class="topic-clickable-area"
+            role="button"
+            tabindex="0"
+            @click="handleSelect(topicItem)"
+            @keyup.enter="handleSelect(topicItem)"
+            @keyup.space.prevent="handleSelect(topicItem)"
+          >
+            <TopicCard :topic="topicItem" :selectable="false" />
+          </div>
+          <div class="topic-action-bar">
+            <el-button
+              type="primary"
+              size="small"
+              link
+              icon="Star"
+              @click.stop="handleFollow(topicItem.topic)"
+            >
+              关注此 Topic 词
+            </el-button>
+          </div>
         </div>
       </div>
     </el-scrollbar>
@@ -109,14 +147,14 @@ const topicListClass = computed(() => {
 .topic-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 .topic-list.two-col {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 16px;
 }
-.topic-list.two-col .topic-clickable-item {
+.topic-list.two-col .topic-item-wrapper {
   width: calc(50% - 8px);
 }
 .topic-list.three-col {
@@ -124,10 +162,35 @@ const topicListClass = computed(() => {
   flex-wrap: wrap;
   gap: 16px;
 }
-.topic-list.three-col .topic-clickable-item {
+.topic-list.three-col .topic-item-wrapper {
   width: calc(33.333% - 11px);
 }
-.topic-clickable-item {
+
+.topic-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topic-item-wrapper:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--el-color-primary-light-7);
+}
+
+.topic-clickable-area {
   cursor: pointer;
+  flex: 1;
+}
+
+.topic-action-bar {
+  padding: 4px 12px 8px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px dashed var(--el-border-color-lighter);
 }
 </style>

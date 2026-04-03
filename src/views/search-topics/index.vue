@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent, ref } from "vue";
 import { useRouter } from "vue-router";
 import {
+  addFollowedKeyword,
   getTopicByKeyword,
   searchTermsByKeyword,
   type Topic
@@ -25,6 +26,7 @@ const TopicPanel = defineAsyncComponent(
 
 const loadingTerms = ref(false);
 const loadingTopics = ref(false);
+const loadingFollow = ref(false);
 const searchKeyword = ref("");
 const selectedKeywords = ref<string[]>([]);
 const candidateOptions = ref<CandidateOption[]>([]);
@@ -37,7 +39,26 @@ const defaultEnd = Date.now();
 const defaultStart = defaultEnd - 24 * 3600 * 1000;
 const timeRange = ref<[Date, Date]>([new Date(defaultStart), new Date(defaultEnd)]);
 
-const loading = computed(() => loadingTerms.value || loadingTopics.value);
+const loading = computed(
+  () => loadingTerms.value || loadingTopics.value || loadingFollow.value
+);
+
+async function handleFollowKeyword(keyword: string) {
+  if (!keyword.trim()) return;
+  loadingFollow.value = true;
+  try {
+    const res = await addFollowedKeyword(keyword);
+    if (res.success) {
+      message(`已成功关注：${keyword}`, { type: "success" });
+    } else {
+      message(res.error_message || "关注失败", { type: "warning" });
+    }
+  } catch {
+    message("关注接口调用异常", { type: "error" });
+  } finally {
+    loadingFollow.value = false;
+  }
+}
 
 function normalizeCandidateOptions(data: {
   keywords?: Array<{ term?: string; weigh?: number }>;
@@ -298,15 +319,34 @@ function handleTopicSelect(topic: Topic) {
       </div>
 
       <div v-if="candidateOptions.length" class="candidate-tags">
-        <el-tag
+        <el-popover
           v-for="option in candidateOptions"
           :key="option.label"
-          :effect="selectedKeywords.includes(option.label) ? 'dark' : 'plain'"
-          class="candidate-tag"
-          @click="toggleKeyword(option)"
+          placement="top"
+          :width="200"
+          trigger="hover"
         >
-          {{ option.label }}
-        </el-tag>
+          <template #reference>
+            <el-tag
+              :effect="selectedKeywords.includes(option.label) ? 'dark' : 'plain'"
+              class="candidate-tag"
+              @click="toggleKeyword(option)"
+            >
+              {{ option.label }}
+            </el-tag>
+          </template>
+          <div class="popover-content">
+            <p>候选词：{{ option.label }}</p>
+            <el-button
+              size="small"
+              type="primary"
+              link
+              @click.stop="handleFollowKeyword(option.label)"
+            >
+              关注此关键词
+            </el-button>
+          </div>
+        </el-popover>
       </div>
     </el-card>
 
@@ -329,6 +369,7 @@ function handleTopicSelect(topic: Topic) {
         :topics="topics"
         layout="two-col"
         @select="handleTopicSelect"
+        @follow="handleFollowKeyword"
       />
     </el-card>
   </div>
