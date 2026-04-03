@@ -11,7 +11,6 @@ import {
 } from "@/common/const";
 import {
   getTopicSnapshotDetail,
-  type NewsItem,
   type Topic
 } from "@/api/sentiment";
 import { message } from "@/utils/message";
@@ -27,7 +26,7 @@ const loading = ref(false);
 const topicDetail = ref<Topic | null>(null);
 const topicTimeline = ref<Topic[]>([]);
 const topicStore = useTopicStoreHook();
-
+let defaultTopic = topicStore.getSelectedTopic;
 const NewsPanel = defineAsyncComponent(
   () => import("@/components/NewsPanel.vue") as Promise<any>
 );
@@ -48,6 +47,15 @@ const sentimentTagType = computed(() => {
 });
 
 const stageMeta = computed(() => getTopicStageMeta(topicDetail.value?.stage));
+const topicDisplayTitle = computed(() => {
+  const llmTitle = String(topicDetail.value?.llm_title || "").trim();
+  if (llmTitle) {
+    return llmTitle;
+  }
+
+  const topic = String(topicDetail.value?.topic || "").trim();
+  return topic || "-";
+});
 const heatChangeText = computed(() =>
   formatHeatChangePercent(topicDetail.value?.heat_change_percent)
 );
@@ -95,7 +103,7 @@ const newsGroups = computed(() => {
 });
 
 async function loadTopicDetail() {
-  let defaultTopic = topicStore.getSelectedTopic;
+
   if (!defaultTopic) {
     const rawTopic = sessionStorage.getItem("_selectedTopic");
     if (rawTopic) {
@@ -203,7 +211,7 @@ watch(
         <el-card class="detail-card" shadow="never">
           <template #header>
             <div class="detail-header">
-              <h3>{{ topicDetail.topic }}</h3>
+              <h3>{{ topicDisplayTitle }}</h3>
               <div class="detail-tag-row">
                 <el-tag :type="sentimentTagType" effect="light">{{
                   topicDetail.sentiment || "unknown"

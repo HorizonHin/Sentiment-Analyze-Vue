@@ -7,8 +7,8 @@ import {
   getHeatChangeTagType,
   getTopicStageMeta,
   getSentimentPolarityColor
-} from "../common/const";
-import type { Topic } from "../api/sentiment";
+} from "@/common/const";
+import type { Topic } from "@/api/sentiment";
 
 defineOptions({
   name: "TopicCard"
@@ -31,6 +31,15 @@ const sentimentTagType = computed(() => {
 });
 
 const stageMeta = computed(() => getTopicStageMeta(props.topic.stage));
+const displayTitle = computed(() => {
+  const llmTitle = String(props.topic.llm_title || "").trim();
+  if (llmTitle) {
+    return llmTitle;
+  }
+
+  const topic = String(props.topic.topic || "").trim();
+  return topic || "Untitled Topic";
+});
 const heatChangeText = computed(() =>
   formatHeatChangePercent(props.topic.heat_change_percent)
 );
@@ -83,7 +92,7 @@ function handleSelect() {
     @keyup.space.prevent="handleSelect"
   >
     <div class="title-row">
-      <h3 class="topic-name">{{ props.topic.topic || "Untitled Topic" }}</h3>
+      <h3 class="topic-name">{{ displayTitle }}</h3>
       <div class="tag-row">
         <el-tag size="small" :type="sentimentTagType">{{
           props.topic.sentiment || "unknown"

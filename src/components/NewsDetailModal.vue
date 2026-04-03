@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent } from "vue";
 import type { NewsItem } from "../api/sentiment";
 import {
   formatDateTimeYmdHm,
-  formatUtcDateTimeStringToLocalYmdHms
+  formatUtc8DateTimeStringToLocalYmdHms
 } from "../common/const";
 
 const SentimentPieChart = defineAsyncComponent(
@@ -106,13 +106,20 @@ function handleClose() {
           <div class="section">
             <div class="section-title section-title-row">
               <span>Summary</span>
-              <el-tag size="small" effect="plain" type="info">
-                Event Type: {{ item.event_type || "unknown" }}
-              </el-tag>
             </div>
             <p class="summary-text">
               {{ item.summary || "No summary available" }}
             </p>
+          </div>
+
+          <!-- Event Type Section -->
+          <div class="section">
+            <div class="section-title section-title-row">
+              <span>Event Type</span>
+            </div>
+            <el-tag size="large" effect="plain" type="success">
+                {{ item.event_type || "unknown" }}
+              </el-tag>
           </div>
         </div>
 
@@ -145,6 +152,18 @@ function handleClose() {
               <div class="meta-item">
                 <span class="meta-label">Count:</span>
                 <span class="meta-value">{{ item.count }}</span>
+              </div>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="6">
+              <div class="meta-item">
+                <span class="meta-label">Analyzed Time:</span>
+                <span class="meta-value">{{ formatDateTimeYmdHm(item.analyzed_time) }}</span>
+              </div>
+            </el-col>
+                        <el-col :xs="24" :sm="12" :md="6">
+              <div class="meta-item">
+                <span class="meta-label">Last Time:</span>
+                <span class="meta-value">{{ formatDateTimeYmdHm(item.last_time) }}</span>
               </div>
             </el-col>
           </el-row>

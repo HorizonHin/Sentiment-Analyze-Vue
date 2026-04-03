@@ -9,6 +9,7 @@ defineOptions({
 const props = defineProps<{
   loading: boolean;
   topics: Topic[];
+  layout?: "one-col" | "two-col" | "three-col";
 }>();
 
 const emit = defineEmits<{
@@ -38,6 +39,12 @@ const sortedTopics = computed<Topic[]>(() => {
 function handleSelect(topic: Topic) {
   emit("select", topic);
 }
+
+const topicListClass = computed(() => {
+  if (props.layout === "two-col") return "topic-list two-col";
+  if (props.layout === "three-col") return "topic-list three-col";
+  return "topic-list";
+});
 </script>
 
 <template>
@@ -51,12 +58,12 @@ function handleSelect(topic: Topic) {
     </div>
 
     <el-empty
-      v-if="!sortedTopics.length && !loading"
+      v-if="!sortedTopics.length && !props.loading"
       description="暂无话题数据"
     />
 
-    <el-scrollbar v-else max-height="560px" class="topic-scrollbar">
-      <div class="topic-list">
+    <el-scrollbar v-else max-height="1440" class="topic-scrollbar">
+      <div :class="topicListClass">
         <div
           v-for="topicItem in sortedTopics"
           :key="`${topicItem.id}-${topicItem.topic}`"
@@ -104,7 +111,22 @@ function handleSelect(topic: Topic) {
   flex-direction: column;
   gap: 12px;
 }
-
+.topic-list.two-col {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.topic-list.two-col .topic-clickable-item {
+  width: calc(50% - 8px);
+}
+.topic-list.three-col {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.topic-list.three-col .topic-clickable-item {
+  width: calc(33.333% - 11px);
+}
 .topic-clickable-item {
   cursor: pointer;
 }

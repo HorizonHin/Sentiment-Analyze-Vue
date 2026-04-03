@@ -134,7 +134,7 @@ function handleRefresh() {
 
 .source-group-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -162,7 +162,12 @@ function handleRefresh() {
   gap: 10px;
 }
 
-@media (width <= 992px) {
+@media (width <= 1200px) {
+  .source-group-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (width <= 768px) {
   .source-group-list {
     grid-template-columns: 1fr;
   }

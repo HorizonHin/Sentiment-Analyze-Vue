@@ -30,6 +30,6 @@ export default {
         title: "话题详情",
         showLink: false
       }
-    }
+    },
   ]
 } satisfies RouteConfigsTable;

@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import { message } from "../../utils/message";
 import {
   getLatestRankedNews,
-  getTrendingTopics,
   type NewsItem,
   type Topic
 } from "../../api/sentiment";
@@ -59,18 +58,6 @@ async function loadDashboardData() {
     }
     sourceNewsMap.value = newsRes.data;
 
-    const topicsRes = await getTrendingTopics().catch(() => null);
-    if (!topicsRes) {
-      message("获取热门话题失败", { type: "warning" });
-      topics.value = [];
-    } else if (!topicsRes.success) {
-      message(topicsRes.error_message || "获取热门话题失败", {
-        type: "warning"
-      });
-      topics.value = [];
-    } else {
-      topics.value = Array.isArray(topicsRes.data) ? topicsRes.data : [];
-    }
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "数据加载失败";
@@ -115,11 +102,6 @@ onMounted(() => {
         :groups="sourceGroups"
         @refresh="loadDashboardData"
       />
-      <TopicPanel
-        :loading="loading"
-        :topics="topics"
-        @select="handleTopicSelect"
-      />
     </div>
   </div>
 </template>
@@ -144,13 +126,7 @@ onMounted(() => {
 
 .dashboard-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
-}
-
-@media (width <= 992px) {
-  .dashboard-layout {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

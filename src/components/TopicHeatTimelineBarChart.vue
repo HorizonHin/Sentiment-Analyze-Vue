@@ -15,8 +15,8 @@ import {
   getTopicStageColor,
   getTopicStageMeta,
   STAGE_SET
-} from "../common/const";
-import type { Topic } from "../api/sentiment";
+} from "@/common/const";
+import type { Topic } from "@/api/sentiment";
 
 defineOptions({
   name: "TopicHeatTimelineBarChart"
@@ -42,8 +42,10 @@ const chartData = computed(() => {
       const stageMeta = getTopicStageMeta(item.stage);
       const heat = Number(item.total_weight || 0);
       const change = Number(item.heat_change_percent || 0);
+      const ts = Number(item.updated_at || item.created_at || 0) * 1000;
       return {
         timeLabel: formatDateTimeYmdHm(item.updated_at || item.created_at),
+        timeValue: ts,
         totalWeight: Number.isFinite(heat) ? Number(heat.toFixed(2)) : 0,
         heatChangePercent: Number.isFinite(change) ? change : 0,
         stageLabel: stageMeta.label,
@@ -63,6 +65,8 @@ function renderChart() {
 
   const weights = chartData.value.map(item => item.totalWeight);
   const maxWeight = Math.max(1, ...weights);
+  // 计算最大symbolSize
+  const maxSymbolSize = Math.max(10, Math.round((maxWeight / maxWeight) * 28));
 
   chartInstance.setOption({
     title: {
@@ -74,11 +78,13 @@ function renderChart() {
     },
     tooltip: {
       trigger: "item",
-      formatter: (params: any) => {
-        const index = Number(params?.data?.rawIndex ?? params?.dataIndex ?? 0);
-        const item = chartData.value[index];
+      formatter: (params) => {
+        const data = params.data;
+        // Find by timestamp and y value
+        const item = chartData.value.find(
+          d => d.timeValue === data.value[0] && d.totalWeight === data.value[1]
+        );
         if (!item) return "";
-
         return [
           item.timeLabel,
           `Heat: ${item.totalWeight.toFixed(2)}`,
@@ -112,8 +118,7 @@ function renderChart() {
       data: [...STAGE_SET]
     },
     xAxis: {
-      type: "category",
-      data: chartData.value.map(item => item.timeLabel),
+      type: "time",
       axisLabel: {
         rotate: 35
       }
@@ -126,17 +131,13 @@ function renderChart() {
       {
         name: "Total Weight",
         type: "scatter",
-        data: chartData.value.map((item, index) => ({
-          value: [index, item.totalWeight],
-          rawIndex: index,
+        data: chartData.value.map(item => ({
+          value: [item.timeValue, item.totalWeight],
           stage: item.stageLabel,
           itemStyle: {
             color: item.stageColor
           },
-          symbolSize: Math.max(
-            10,
-            Math.round((item.totalWeight / maxWeight) * 28)
-          )
+          symbolSize: maxSymbolSize
         }))
       }
     ]

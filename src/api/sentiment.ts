@@ -58,7 +58,7 @@ export type NewsItem = {
   attention_score: number;
   first_time: number;
   last_time: number;
-  analyzed_time: string; //服务器会传入UTC+0的时间，前端需要本地化
+  analyzed_time: string; //服务器会传入UTC+8的时间，前端需要本地化
   count: number;
   total_weigh: number;
   rank_timeline: RankTimelineEntry[];
@@ -72,8 +72,11 @@ export type TopicPlatformDistribution = {
 };
 
 export type Topic = {
+  created_at: number;
   id: number;
   topic: string;
+  llm_title: string;//优先展示这个字段，如果没有再展示topic字段
+  topic_type: string;
   rank_data: Record<string, NewsItem[]>;
   platform_distribution: TopicPlatformDistribution[];
   start_time: number;
@@ -81,12 +84,14 @@ export type Topic = {
   window_size: number;
   sentiment: string;
   news_count: number;
+  updated_at: number;
+  version: number;
+
   total_weight: number;
   heat_change_percent: number;
   stage: string;
-  created_at: number;
-  updated_at: number;
-  version: number;
+  
+  source_diversity: number;
 };
 
 export type LatestRankedNewsResponse = ApiResult<Record<string, NewsItem[]>>;
@@ -107,6 +112,45 @@ export type TopicSnapshotDetailQuery = {
   id: number;
   history_limit?: number;
 };
+
+export type SearchTermsByKeywordQuery = {
+  keyword: string;
+  start_time: string | number | Date;
+  end_time: string | number | Date;
+  news_first_time?: string | number | Date;
+  limit?: number;
+};
+
+export type SearchTermsByKeywordData = {
+  keyword: string;
+  keywords: NewsKeyword[];
+  entities: NewsEntity[];
+};
+
+export type SearchTermsByKeywordResponse = ApiResult<SearchTermsByKeywordData>;
+
+export type TopicByKeywordQuery = {
+  keyword: string;
+  start_time?: string | number | Date;
+  end_time?: string | number | Date;
+  news_first_time?: string | number | Date;
+};
+
+export type TopicByKeywordResponse = ApiResult<Topic>;
+
+export type FollowedKeywordsListData = {
+  keywords: string[];
+};
+
+export type FollowedKeywordsListResponse = ApiResult<FollowedKeywordsListData>;
+
+export type FollowedKeywordMutationData = {
+  keyword_term: string;
+  added?: boolean;
+  deleted?: boolean;
+};
+
+export type FollowedKeywordMutationResponse = ApiResult<FollowedKeywordMutationData>;
 
 /**
  * Get analyzed latest-ranked news and group by source_id.
@@ -149,6 +193,84 @@ export const getTopicSnapshotDetail = (query: TopicSnapshotDetailQuery) => {
         created_at: formatApiTimestamp(query.created_at),
         id: query.id,
         history_limit: query.history_limit
+      }
+    }
+  );
+};
+
+/**
+ * Search candidate keywords/entities by user input keyword in a time window.
+ */
+export const searchTermsByKeyword = (query: SearchTermsByKeywordQuery) => {
+  return http.request<SearchTermsByKeywordResponse>("get", "/api/news/search-terms", {
+    params: {
+      keyword: query.keyword,
+      start_time: formatApiTimestamp(query.start_time),
+      end_time: formatApiTimestamp(query.end_time),
+      news_first_time: query.news_first_time
+        ? formatApiTimestamp(query.news_first_time)
+        : undefined,
+      limit: query.limit
+    }
+  });
+};
+
+/**
+ * Fetch single topic by keyword (or build one from related news if needed).
+ */
+export const getTopicByKeyword = (query: TopicByKeywordQuery) => {
+  return http.request<TopicByKeywordResponse>("get", "/api/topics/by-keyword", {
+    params: {
+      keyword: query.keyword,
+      start_time: query.start_time ? formatApiTimestamp(query.start_time) : undefined,
+      end_time: query.end_time ? formatApiTimestamp(query.end_time) : undefined,
+      news_first_time: query.news_first_time
+        ? formatApiTimestamp(query.news_first_time)
+        : undefined
+    }
+  });
+};
+
+/**
+ * List followed keyword terms.
+ */
+export const listFollowedKeywords = (limit = 1000) => {
+  return http.request<FollowedKeywordsListResponse>(
+    "get",
+    "/api/keywords/followed/list",
+    {
+      params: {
+        limit
+      }
+    }
+  );
+};
+
+/**
+ * Add a followed keyword term.
+ */
+export const addFollowedKeyword = (keyword_term: string) => {
+  return http.request<FollowedKeywordMutationResponse>(
+    "post",
+    "/api/keywords/followed/add",
+    {
+      data: {
+        keyword_term
+      }
+    }
+  );
+};
+
+/**
+ * Delete a followed keyword term.
+ */
+export const deleteFollowedKeyword = (keyword_term: string) => {
+  return http.request<FollowedKeywordMutationResponse>(
+    "delete",
+    "/api/keywords/followed/delete",
+    {
+      params: {
+        keyword_term
       }
     }
   );

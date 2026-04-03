@@ -142,7 +142,7 @@ export function formatDateTimeYmdHm(
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-export function formatUtcDateTimeStringToLocalYmdHms(
+export function formatUtc8DateTimeStringToLocalYmdHms(
   value?: string | null
 ): string {
   if (!value) {
@@ -168,7 +168,9 @@ export function formatUtcDateTimeStringToLocalYmdHms(
   const minute = Number(utcMatch[5]);
   const second = Number(utcMatch[6]);
 
-  const localDate = new Date(Date.UTC(year, month, day, hour, minute, second));
+  // Backend string is in UTC+8. Convert to UTC instant, then format in client local timezone.
+  const utcMillis = Date.UTC(year, month, day, hour, minute, second) - 8 * 60 * 60 * 1000;
+  const localDate = new Date(utcMillis);
   return Number.isNaN(localDate.getTime())
     ? value
     : formatDateToYmdHms(localDate);
@@ -192,7 +194,9 @@ export function formatWindowHourMinute(value?: number | null): string {
   return `${minutes} Minute`;
 }
 
-export const STAGE_SET = ["Inception", "Growth", "Climax", "Decline"] as const;
+export const STAGE_SET = ["Inception", "Growth", "Climax", "Decline", "Maturity"] as const;
+
+
 
 export type TopicStage = (typeof STAGE_SET)[number];
 
@@ -200,7 +204,8 @@ export const TOPIC_STAGE_COLORS: Record<TopicStage, string> = {
   Inception: "#409eff",
   Growth: "#67c23a",
   Climax: "#e6a23c",
-  Decline: "#f56c6c"
+  Decline: "#f56c6c",
+  Maturity: "#750e5b"
 };
 
 type StageMeta = {
@@ -212,19 +217,52 @@ const TOPIC_STAGE_META: Record<TopicStage, StageMeta> = {
   Inception: { label: "Inception", tagType: "info" },
   Growth: { label: "Growth", tagType: "success" },
   Climax: { label: "Climax", tagType: "warning" },
-  Decline: { label: "Decline", tagType: "danger" }
+  Decline: { label: "Decline", tagType: "danger" },
+  Maturity: { label: "Maturity", tagType: "warning" }
 };
 
+const TOPIC_STAGE_ALIAS: Record<string, TopicStage> = {
+  inception: "Inception",
+  growth: "Growth",
+  climax: "Climax",
+  decline: "Decline",
+  // Keep common Chinese aliases for compatibility with mixed backend data.
+  "起步期": "Inception",
+  "增长期": "Growth",
+  "爆发期": "Climax",
+  "高峰期": "Climax",
+  "衰退期": "Decline",
+  "降温期": "Decline"
+};
+
+function normalizeTopicStage(stage?: string | null): TopicStage | null {
+  const text = String(stage || "").trim();
+  if (!text) {
+    return null;
+  }
+
+  const direct = text as TopicStage;
+  if (TOPIC_STAGE_META[direct]) {
+    return direct;
+  }
+
+  const byAlias = TOPIC_STAGE_ALIAS[text.toLowerCase()];
+  return byAlias || null;
+}
+
 export function getTopicStageMeta(stage?: string | null): StageMeta {
-  const key = (stage || "").trim() as TopicStage;
-  return (
-    TOPIC_STAGE_META[key] || { label: stage || "Unknown", tagType: "info" }
-  );
+  const normalized = normalizeTopicStage(stage);
+  if (normalized) {
+    return TOPIC_STAGE_META[normalized];
+  }
+
+  const fallbackLabel = String(stage || "").trim() || "Unknown";
+  return { label: fallbackLabel, tagType: "info" };
 }
 
 export function getTopicStageColor(stage?: string | null): string {
-  const key = (stage || "").trim() as TopicStage;
-  return TOPIC_STAGE_COLORS[key] || "#909399";
+  const normalized = normalizeTopicStage(stage);
+  return normalized ? TOPIC_STAGE_COLORS[normalized] : "#909399";
 }
 
 export function formatHeatChangePercent(value?: number | null): string {
