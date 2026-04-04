@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, ref, onMounted } from "vue";
+import { defineAsyncComponent, ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   getTopicRiskWarnings,
@@ -11,6 +11,7 @@ import {
 } from "@/api/sentiment";
 import { message } from "@/utils/message";
 import { useTopicStoreHook } from "@/store/modules/topic";
+import { RISK_TYPE_META } from "@/common/const";
 
 const RiskTopicCard = defineAsyncComponent(
   () => import("@/components/RiskTopicCard.vue")
@@ -24,6 +25,20 @@ const topicsWithRisks = ref<
     audits: SensitiveTitleRecord[];
   }>
 >([]);
+
+const selectedRiskType = ref("all");
+
+const filteredTopics = computed(() => {
+  if (selectedRiskType.value === "all") return topicsWithRisks.value;
+  
+  if (selectedRiskType.value === "sensitive_audit") {
+    return topicsWithRisks.value.filter(item => item.audits && item.audits.length > 0);
+  }
+
+  return topicsWithRisks.value.filter(item => 
+    item.risks.some(risk => risk.risk_type === selectedRiskType.value)
+  );
+});
 
 const router = useRouter();
 const topicStore = useTopicStoreHook();
@@ -115,18 +130,33 @@ onMounted(() => {
 <template>
   <div class="risk-topics-container" v-loading="loading">
     <div class="header-actions">
-      <h2>风险 Topic 监控</h2>
+      <div class="left-group">
+        <h2>风险 Topic 监控</h2>
+        <div class="filter-group">
+          <el-radio-group v-model="selectedRiskType" size="default">
+            <el-radio-button label="all">全部 ({{ topicsWithRisks.length }})</el-radio-button>
+            <el-radio-button 
+              v-for="(meta, type) in RISK_TYPE_META" 
+              :key="type" 
+              :label="type"
+            >
+              {{ meta.label }}
+            </el-radio-button>
+            <el-radio-button label="sensitive_audit">敏感词屏蔽</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
       <el-button icon="Refresh" circle @click="loadTopics" />
     </div>
 
     <el-empty
-      v-if="!topicsWithRisks.length && !loading"
-      description="暂无存在风险的话题"
+      v-if="!filteredTopics.length && !loading"
+      :description="selectedRiskType === 'all' ? '暂无存在风险的话题' : '暂无匹配该类型的风险话题'"
     />
 
     <div class="risk-grid">
       <RiskTopicCard
-        v-for="item in topicsWithRisks"
+        v-for="item in filteredTopics"
         :key="`${item.topic.created_at}_${item.topic.id}`"
         :topic="item.topic"
         :risks="item.risks"
@@ -147,6 +177,16 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+}
+
+.left-group {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.filter-group {
+  margin-top: 4px;
 }
 
 .risk-grid {

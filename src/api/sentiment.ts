@@ -301,6 +301,33 @@ export type SensitiveTitleRecord = {
   context: any;
 };
 
+export type DailyReportTopic = {
+  topic: string;
+  llm_title: string;
+  total_weight: number;
+  stage: string;
+  sentiment: string;
+};
+
+export type DailyReportRisk = {
+  topic_name: string;
+  risk_type: string;
+  risk_level: string;
+  reason: string;
+  occurred_at: number;
+};
+
+export type DailyReportData = {
+  start_time: number;
+  end_time: number;
+  total_active_topics: number;
+  top_topics: DailyReportTopic[];
+  risk_warnings: DailyReportRisk[];
+  sentiment_stats: Record<string, number>;
+};
+
+export type DailyReportResponse = ApiResult<DailyReportData>;
+
 /**
  * Get topic risk warnings.
  */
@@ -316,6 +343,25 @@ export const getTopicRiskWarnings = (params?: {
     "get",
     "/api/risk/topic-warnings",
     { params }
+  );
+};
+
+/**
+ * Get daily report by date (YYYYMMDD).
+ */
+export const getDailyReport = (date: string) => {
+  return http.request<DailyReportResponse>("get", "/api/report/daily", {
+    params: { date }
+  });
+};
+
+/**
+ * Generate manual daily report.
+ */
+export const generateDailyReport = () => {
+  return http.request<ApiResult<{ message: string; path: string }>>(
+    "post",
+    "/api/report/generate"
   );
 };
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { getTrendingTopics, type Topic } from "@/api/sentiment";
+import { getTrendingTopics, addFollowedKeyword, type Topic } from "@/api/sentiment";
 import { message } from "@/utils/message";
 import { useTopicStoreHook } from "@/store/modules/topic";
 
@@ -29,6 +29,19 @@ async function loadTopics() {
   }
 }
 
+async function handleTopicFollow(keyword: string) {
+  try {
+    const res = await addFollowedKeyword(keyword);
+    if (res.success) {
+      message(`已关注话题：${keyword}`, { type: "success" });
+    } else {
+      message(res.error_message || "关注失败", { type: "error" });
+    }
+  } catch (error) {
+    message("关注请求失败", { type: "error" });
+  }
+}
+
 function handleTopicSelect(topic: Topic) {
   topicStore.setSelectedTopic(topic);
   sessionStorage.setItem("_selectedTopic", JSON.stringify(topic));
@@ -53,7 +66,13 @@ onMounted(() => {
       <el-button size="small" :loading="loading" @click="loadTopics">刷新</el-button>
     </div>
     <div class="topics-panel-2col">
-      <TopicPanel :loading="loading" :topics="topics" layout="two-col" @select="handleTopicSelect" />
+      <TopicPanel
+        :loading="loading"
+        :topics="topics"
+        layout="two-col"
+        @select="handleTopicSelect"
+        @follow="handleTopicFollow"
+      />
     </div>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from "vue";
 import type { Topic, TopicRiskWarning, SensitiveTitleRecord } from "@/api/sentiment";
-import { formatDateTimeYmdHm } from "@/common/const";
+import { formatDateTimeYmdHm, getRiskTypeMeta, getRiskLevelMeta } from "@/common/const";
 
 interface Props {
   topic: Topic;
@@ -20,30 +20,17 @@ const TopicCard = defineAsyncComponent(
   () => import("@/components/TopicCard.vue")
 );
 
-function getRiskTypeLabel(type: string) {
-  const map: Record<string, string> = {
-    negative_cluster: "负面信息聚簇",
-    burst_event: "舆情突发暴增",
-    cross_platform_gap: "跨平台认知偏差"
-  };
-  return map[type] || type;
-}
-
-function getRiskLevelTag(level: string) {
-  const map: Record<string, string> = {
-    low: "info",
-    medium: "warning",
-    high: "danger",
-    critical: "danger"
-  };
-  return map[level] || "info";
-}
-
 function handleSelect(topic: Topic) {
   emit("select", topic);
 }
 
 const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_at;
+
+const getScoreStyle = (score: number) => {
+  if (score >= 80) return { color: "#f56c6c", fontWeight: "bold" };
+  if (score >= 50) return { color: "#e6a23c" };
+  return { color: "#409eff" };
+};
 </script>
 
 <template>
@@ -51,16 +38,37 @@ const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_
     <!-- 风险提示信息区 -->
     <div class="risk-info-overlay">
       <div v-for="risk in risks" :key="risk.occurred_at" class="risk-badge">
-        <el-tag :type="getRiskLevelTag(risk.risk_level) as any" size="small" effect="dark">
-          {{ getRiskTypeLabel(risk.risk_type) }} ({{ risk.risk_score }})
-        </el-tag>
+        <div class="risk-header">
+          <span class="risk-type-wrap" :style="{ color: getRiskTypeMeta(risk.risk_type).color }">
+            <el-icon><component :is="getRiskTypeMeta(risk.risk_type).icon" /></el-icon>
+            <span class="ml-1">{{ getRiskTypeMeta(risk.risk_type).label }}</span>
+          </span>
+          <el-divider direction="vertical" />
+          <el-tag :type="getRiskLevelMeta(risk.risk_level).type as any" size="small" effect="plain" round>
+            {{ getRiskLevelMeta(risk.risk_level).label }}
+          </el-tag>
+          <span class="risk-score-val" :style="getScoreStyle(risk.risk_score)">
+            {{ risk.risk_score }}
+          </span>
+        </div>
         <div class="risk-reason">{{ risk.reason }}</div>
       </div>
+      
       <div v-for="audit in audits" :key="audit.occurred_at" class="risk-badge audit-badge">
-        <el-tag type="danger" size="small" effect="plain">
-          敏感标题屏蔽: {{ audit.old_topic }} -> {{ audit.topic_name }}
-        </el-tag>
-        <div class="risk-reason">原因: {{ audit.reason }}</div>
+        <div class="risk-header">
+          <span class="risk-type-wrap" style="color: #f56c6c">
+            <el-icon><Filter /></el-icon>
+            <span class="ml-1">敏感标题屏蔽</span>
+          </span>
+          <el-divider direction="vertical" />
+          <el-tag type="danger" size="small" effect="dark" round>高危</el-tag>
+        </div>
+        <div class="audit-flow">
+          <span class="old-name">{{ audit.old_topic }}</span>
+          <el-icon class="arrow"><Right /></el-icon>
+          <span class="new-name">{{ audit.topic_name }}</span>
+        </div>
+        <div class="risk-reason">策略原因: {{ audit.reason }}</div>
       </div>
     </div>
 
@@ -70,7 +78,8 @@ const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_
     </div>
 
     <div v-if="lastOccurrence" class="footer-meta">
-      最近检出: {{ formatDateTimeYmdHm(lastOccurrence) }}
+      <el-icon><Clock /></el-icon>
+      <span class="ml-1">最近检出: {{ formatDateTimeYmdHm(lastOccurrence) }}</span>
     </div>
   </div>
 </template>
@@ -83,7 +92,7 @@ const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 16px;
   overflow: hidden;
-  transition: transform 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   height: 100%;
   cursor: pointer;
@@ -91,17 +100,42 @@ const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_
 
 .risk-item-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  border-color: var(--el-color-primary-light-5);
 }
 
 .risk-info-overlay {
   padding: 16px;
-  background: var(--el-color-info-light-9);
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  background: linear-gradient(180deg, var(--el-fill-color-light) 0%, var(--el-bg-color) 100%);
+  border-bottom: 2px dashed var(--el-border-color-lighter);
+}
+
+.risk-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.risk-type-wrap {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.risk-score-val {
+  margin-left: auto;
+  font-family: "Oswald", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .risk-badge {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .risk-badge:last-child {
@@ -110,27 +144,50 @@ const lastOccurrence = props.risks[0]?.occurred_at || props.audits[0]?.occurred_
 
 .risk-reason {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-top: 4px;
-  line-height: 1.4;
-  padding-left: 4px;
-  border-left: 2px solid var(--el-color-danger-light-3);
+  color: var(--el-text-color-regular);
+  margin-top: 6px;
+  line-height: 1.5;
+  padding: 4px 8px;
+  background: var(--el-fill-color-extra-light);
+  border-radius: 4px;
+  border-left: 3px solid var(--el-color-danger-light-3);
 }
 
-.audit-badge .risk-reason {
-  border-left-color: var(--el-color-warning);
+.audit-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin: 6px 0;
+  padding: 4px;
+}
+
+.old-name {
+  color: var(--el-text-color-secondary);
+  text-decoration: line-through;
+}
+
+.new-name {
+  color: var(--el-color-success);
+  font-weight: bold;
 }
 
 .topic-card-wrapper {
-  padding: 8px;
+  padding: 12px;
   flex: 1;
 }
 
 .footer-meta {
-  padding: 10px 16px;
+  padding: 8px 16px;
   font-size: 12px;
   color: var(--el-text-color-placeholder);
   background: var(--el-fill-color-extra-light);
   border-top: 1px solid var(--el-border-color-extra-light);
+  display: flex;
+  align-items: center;
+}
+
+.ml-1 {
+  margin-left: 4px;
 }
 </style>

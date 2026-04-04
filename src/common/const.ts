@@ -234,7 +234,27 @@ const TOPIC_STAGE_ALIAS: Record<string, TopicStage> = {
   "衰退期": "Decline",
   "降温期": "Decline"
 };
+// Risk Management Constants
+export const RISK_TYPE_META = {
+  negative_cluster: { label: "负面聚簇", icon: "Warning", color: "#f56c6c" },
+  burst_event: { label: "舆情突发", icon: "TrendCharts", color: "#e6a23c" },
+  cross_platform_gap: { label: "认知偏差", icon: "Share", color: "#409eff" }
+} as const;
 
+export const RISK_LEVEL_META = {
+  low: { label: "低风险", type: "info", color: "#909399" },
+  medium: { label: "中风险", type: "warning", color: "#e6a23c" },
+  high: { label: "高风险", type: "danger", color: "#f56c6c" },
+  critical: { label: "极高危", type: "danger", color: "#750e5b" }
+} as const;
+
+export function getRiskTypeMeta(type: string) {
+  return RISK_TYPE_META[type as keyof typeof RISK_TYPE_META] || { label: type, icon: "InfoFilled", color: "#909399" };
+}
+
+export function getRiskLevelMeta(level: string) {
+  return RISK_LEVEL_META[level as keyof typeof RISK_LEVEL_META] || { label: level, type: "info", color: "#909399" };
+}
 function normalizeTopicStage(stage?: string | null): TopicStage | null {
   const text = String(stage || "").trim();
   if (!text) {
