@@ -17,22 +17,22 @@ let chartInstance: ReturnType<typeof echarts.init> | null = null;
 
 const ratingsData = computed(() => [
   {
-    name: "Optimism",
+    name: "乐观度",
     value: Math.round((props.item.optimism_score || 0) * 100),
     color: "#3f8ce8"
   },
   {
-    name: "Trust",
+    name: "信任度",
     value: Math.round((props.item.trust_score || 0) * 100),
     color: "#1f5eff"
   },
   {
-    name: "Controversy",
+    name: "争议性",
     value: Math.round((props.item.controversy_score || 0) * 100),
     color: "#ff9f7f"
   },
   {
-    name: "Attention",
+    name: "关注度",
     value: Math.round((props.item.attention_score || 0) * 100),
     color: "#fdbf00"
   }
@@ -48,7 +48,7 @@ function renderChart() {
   chartInstance = $echarts.init(chartRef.value);
   chartInstance.setOption({
     title: {
-      text: "Scores",
+      text: "情绪评分",
       textStyle: {
         fontSize: 14,
         fontWeight: "bold"

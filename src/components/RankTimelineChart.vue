@@ -60,7 +60,7 @@ function renderChart() {
   chartInstance = $echarts.init(chartRef.value);
   chartInstance.setOption({
     title: {
-      text: "Rank Timeline",
+      text: "排名趋势图",
       textStyle: {
         fontSize: 14,
         fontWeight: "bold"
@@ -87,7 +87,7 @@ function renderChart() {
       top: 50,
       left: 50,
       right: 20,
-      bottom: 80,
+      bottom: 10,
       containLabel: true
     },
     dataZoom: [
@@ -123,7 +123,7 @@ function renderChart() {
     },
     series: [
       {
-        name: "Rank",
+        name: "排名",
         type: "line",
         data: timelineData.value.map(point => [point.time, point.rank]),
         smooth: true,

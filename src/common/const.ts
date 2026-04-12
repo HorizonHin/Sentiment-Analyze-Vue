@@ -214,11 +214,11 @@ type StageMeta = {
 };
 
 const TOPIC_STAGE_META: Record<TopicStage, StageMeta> = {
-  Inception: { label: "Inception", tagType: "info" },
-  Growth: { label: "Growth", tagType: "success" },
-  Climax: { label: "Climax", tagType: "warning" },
-  Decline: { label: "Decline", tagType: "danger" },
-  Maturity: { label: "Maturity", tagType: "warning" }
+  Inception: { label: "起步期", tagType: "info" },
+  Growth: { label: "增长期", tagType: "success" },
+  Climax: { label: "爆发期", tagType: "warning" },
+  Decline: { label: "衰退期", tagType: "danger" },
+  Maturity: { label: "高峰期", tagType: "warning" }
 };
 
 const TOPIC_STAGE_ALIAS: Record<string, TopicStage> = {

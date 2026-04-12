@@ -9,6 +9,7 @@ import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
 import Setting from "~icons/ri/settings-3-line";
+import { ref } from "vue";
 
 const {
   layout,
@@ -16,11 +17,11 @@ const {
   logout,
   onPanel,
   pureApp,
-  username,
   userAvatar,
   avatarsStyle,
   toggleSideBar
 } = useNav();
+const username = ref("黄皓鑫");
 </script>
 
 <template>
@@ -49,7 +50,7 @@ const {
       <!-- 退出登录 -->
       <el-dropdown trigger="click">
         <span class="el-dropdown-link navbar-bg-hover select-none">
-          <img :src="userAvatar" :style="avatarsStyle" />
+          <!-- <img :src="userAvatar" :style="avatarsStyle" /> -->
           <p v-if="username" class="dark:text-white">{{ username }}</p>
         </span>
         <template #dropdown>

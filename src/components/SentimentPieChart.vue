@@ -28,17 +28,17 @@ const pieChartData = computed(() => {
   return [
     {
       value: Math.round((props.item.positive_ratio || 0) * 100),
-      name: "Positive",
+      name: "正面",
       itemStyle: { color: getSentimentPolarityColor("positive") }
     },
     {
       value: Math.round((props.item.negative_ratio || 0) * 100),
-      name: "Negative",
+      name: "负面",
       itemStyle: { color: getSentimentPolarityColor("negative") }
     },
     {
       value: Math.round((props.item.neutral_ratio || 0) * 100),
-      name: "Neutral",
+      name: "中性",
       itemStyle: { color: getSentimentPolarityColor("neutral") }
     }
   ];
@@ -51,10 +51,16 @@ function renderChart() {
     chartInstance.dispose();
   }
 
+  const polarityMap = {
+    positive: "正面",
+    negative: "负面",
+    neutral: "中性"
+  };
+
   chartInstance = $echarts.init(chartRef.value);
   chartInstance.setOption({
     title: {
-      text: props.item.sentiment_polarity || "Sentiment",
+      text: polarityMap[props.item.sentiment_polarity?.toLowerCase()] || "情感倾向",
       left: "center",
       textStyle: {
         fontSize: 14,
@@ -67,7 +73,7 @@ function renderChart() {
     },
     legend: {
       bottom: 10,
-      data: ["Positive", "Negative", "Neutral"]
+      data: ["正面", "负面", "中性"]
     },
     series: [
       {

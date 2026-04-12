@@ -104,7 +104,7 @@ function handleSelect() {
     </div>
 
     <div class="heat-row">
-      <span class="label">Heat Change</span>
+      <span class="label">热度变化趋势</span>
       <el-tag size="small" :type="heatChangeTagType">{{
         heatChangeText
       }}</el-tag>
@@ -112,15 +112,15 @@ function handleSelect() {
 
     <div class="stats-row">
       <div class="stats-item">
-        <span class="label">News</span>
+        <span class="label">新闻量</span>
         <span class="value">{{ props.topic.news_count }}</span>
       </div>
       <div class="stats-item">
-        <span class="label">Weight</span>
+        <span class="label">热度分</span>
         <span class="value">{{ props.topic.total_weight.toFixed(2) }}</span>
       </div>
       <div class="stats-item">
-        <span class="label">Hour Minute</span>
+        <span class="label">分析窗口</span>
         <span class="value">{{
           formatWindowHourMinute(props.topic.window_size)
         }}</span>
@@ -129,7 +129,7 @@ function handleSelect() {
 
     <div class="time-row">
       <span>{{ formatDateTimeYmdHm(props.topic.start_time) }}</span>
-      <span>to</span>
+      <span>至</span>
       <span>{{ formatDateTimeYmdHm(props.topic.end_time) }}</span>
     </div>
 

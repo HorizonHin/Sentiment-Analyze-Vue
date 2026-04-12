@@ -43,6 +43,7 @@ export type NewsItem = {
   source_name: string;
   event_type: string;
   summary: string;
+  comments: string[];
   entities: NewsEntity[];
   keywords: NewsKeyword[];
   latest_rank: number;

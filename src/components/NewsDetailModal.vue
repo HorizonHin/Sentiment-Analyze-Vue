@@ -71,7 +71,7 @@ function handleClose() {
 
           <!-- Entities Section -->
           <div class="section">
-            <div class="section-title">Entities</div>
+            <div class="section-title">实体</div>
             <div v-if="formattedEntities.length" class="entities-list">
               <el-tag
                 v-for="(entity, idx) in formattedEntities"
@@ -87,7 +87,7 @@ function handleClose() {
 
           <!-- Keywords Section -->
           <div class="section">
-            <div class="section-title">Keywords</div>
+            <div class="section-title">关键词</div>
             <div v-if="formattedKeywords.length" class="keywords-list">
               <el-tag
                 v-for="(keyword, idx) in formattedKeywords"
@@ -99,28 +99,52 @@ function handleClose() {
                 {{ keyword }}
               </el-tag>
             </div>
-            <el-empty v-else description="No keywords" />
+            <el-empty v-else description="暂无关键词" />
           </div>
 
           <!-- Summary Section -->
           <div class="section">
             <div class="section-title section-title-row">
-              <span>Summary</span>
+              <span>摘要</span>
             </div>
             <p class="summary-text">
-              {{ item.summary || "No summary available" }}
+              {{ item.summary || "暂无摘要" }}
             </p>
           </div>
+
 
           <!-- Event Type Section -->
           <div class="section">
             <div class="section-title section-title-row">
-              <span>Event Type</span>
+              <span>事件类型</span>
             </div>
             <el-tag size="large" effect="plain" type="success">
-                {{ item.event_type || "unknown" }}
+                {{ item.event_type || "未知" }}
               </el-tag>
           </div>
+        </div>
+
+        <div class="section">
+          <el-collapse>
+            <el-collapse-item name="comments">
+              <template #title>
+                <div class="section-title-row" style="width: 100%; border-bottom: none">
+                  <span class="section-title" style="border-bottom: none; padding-bottom: 0">评论</span>
+                </div>
+              </template>
+              <div v-if="item.comments && item.comments.length" class="comments-list">
+                <el-card
+                  v-for="(comment, idx) in item.comments"
+                  :key="idx"
+                  class="comment-card"
+                  shadow="never"
+                >
+                  <p class="comment-text">{{ comment }}</p>
+                </el-card>
+              </div>
+              <el-empty v-else description="暂无评论" />
+            </el-collapse-item>
+          </el-collapse>
         </div>
 
         <!-- Meta Info -->
@@ -128,7 +152,7 @@ function handleClose() {
           <el-row :gutter="20">
             <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">Source:</span>
+                <span class="meta-label">来源:</span>
                 <span class="meta-value">{{
                   item.source_name || item.source_id
                 }}</span>
@@ -136,13 +160,13 @@ function handleClose() {
             </el-col>
             <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">Latest Rank:</span>
+                <span class="meta-label">最新排名:</span>
                 <span class="meta-value">{{ item.latest_rank || "-" }}</span>
               </div>
             </el-col>
             <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">First Time:</span>
+                <span class="meta-label">首次上榜:</span>
                 <span class="meta-value">{{
                   formatDateTimeYmdHm(item.first_time)
                 }}</span>
@@ -150,19 +174,19 @@ function handleClose() {
             </el-col>
             <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">Count:</span>
+                <span class="meta-label">出现次数:</span>
                 <span class="meta-value">{{ item.count }}</span>
               </div>
             </el-col>
             <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">Analyzed Time:</span>
+                <span class="meta-label">分析时间:</span>
                 <span class="meta-value">{{ formatDateTimeYmdHm(item.analyzed_time) }}</span>
               </div>
             </el-col>
                         <el-col :xs="24" :sm="12" :md="6">
               <div class="meta-item">
-                <span class="meta-label">Last Time:</span>
+                <span class="meta-label">最后更新:</span>
                 <span class="meta-value">{{ formatDateTimeYmdHm(item.last_time) }}</span>
               </div>
             </el-col>
@@ -178,7 +202,7 @@ function handleClose() {
             type="primary"
             icon="Link"
           >
-            Open Original Link
+            查看原始链接
           </el-link>
         </div>
       </div>

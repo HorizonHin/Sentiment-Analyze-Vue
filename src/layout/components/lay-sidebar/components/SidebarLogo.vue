@@ -6,7 +6,8 @@ defineProps({
   collapse: Boolean
 });
 
-const { title, getLogo } = useNav();
+const {  getLogo } = useNav();
+const title = "舆情分析系统"; 
 </script>
 
 <template>

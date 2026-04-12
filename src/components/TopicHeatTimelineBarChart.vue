@@ -70,7 +70,7 @@ function renderChart() {
 
   chartInstance.setOption({
     title: {
-      text: "Topic Heat Timeline",
+      text: "话题热度演进图",
       textStyle: {
         fontSize: 14,
         fontWeight: "bold"
@@ -87,9 +87,9 @@ function renderChart() {
         if (!item) return "";
         return [
           item.timeLabel,
-          `Heat: ${item.totalWeight.toFixed(2)}`,
-          `Change: ${formatHeatChangePercent(item.heatChangePercent)}`,
-          `Stage: ${item.stageLabel}`
+          `热度: ${item.totalWeight.toFixed(2)}`,
+          `变化: ${formatHeatChangePercent(item.heatChangePercent)}`,
+          `阶段: ${item.stageLabel}`
         ].join("<br/>");
       }
     },
@@ -115,7 +115,7 @@ function renderChart() {
     ],
     legend: {
       top: 24,
-      data: [...STAGE_SET]
+      data: ["起步期", "增长期", "爆发期", "衰退期", "高峰期"]
     },
     xAxis: {
       type: "time",
@@ -125,11 +125,11 @@ function renderChart() {
     },
     yAxis: {
       type: "value",
-      name: "Heat"
+      name: "热度"
     },
     series: [
       {
-        name: "Total Weight",
+        name: "热度权重",
         type: "scatter",
         data: chartData.value.map(item => ({
           value: [item.timeValue, item.totalWeight],
