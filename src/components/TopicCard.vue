@@ -6,7 +6,8 @@ import {
   formatWindowHourMinute,
   getHeatChangeTagType,
   getTopicStageMeta,
-  getSentimentPolarityColor
+  getSentimentPolarityColor,
+  SENTIMENT_POLARITY_MAP
 } from "@/common/const";
 import type { Topic } from "@/api/sentiment";
 
@@ -30,6 +31,11 @@ const sentimentTagType = computed(() => {
   return "warning";
 });
 
+const displaySentiment = computed(() => {
+  const s = (props.topic.sentiment || "").toLowerCase();
+  return SENTIMENT_POLARITY_MAP[s] || SENTIMENT_POLARITY_MAP.unknown;
+});
+
 const stageMeta = computed(() => getTopicStageMeta(props.topic.stage));
 const displayTitle = computed(() => {
   const llmTitle = String(props.topic.llm_title || "").trim();
@@ -38,7 +44,7 @@ const displayTitle = computed(() => {
   }
 
   const topic = String(props.topic.topic || "").trim();
-  return topic || "Untitled Topic";
+  return topic || "无标题话题";
 });
 const heatChangeText = computed(() =>
   formatHeatChangePercent(props.topic.heat_change_percent)
@@ -67,7 +73,8 @@ const platformBars = computed(() => {
       ...item,
       displayName: sourceNameMap.value[item.platform] || item.platform,
       widthPercent: Math.max(2, (item.volume / maxVolume) * 100),
-      color: getSentimentPolarityColor(item.sentiment)
+      color: getSentimentPolarityColor(item.sentiment),
+      displaySentiment: SENTIMENT_POLARITY_MAP[item.sentiment?.toLowerCase()] || SENTIMENT_POLARITY_MAP.unknown
     };
   });
 });
@@ -95,7 +102,7 @@ function handleSelect() {
       <h3 class="topic-name">{{ displayTitle }}</h3>
       <div class="tag-row">
         <el-tag size="small" :type="sentimentTagType">{{
-          props.topic.sentiment || "unknown"
+          displaySentiment
         }}</el-tag>
         <el-tag size="small" effect="plain" :type="stageMeta.tagType">{{
           stageMeta.label
@@ -140,10 +147,12 @@ function handleSelect() {
         class="platform-item"
       >
         <div class="platform-head">
-          <span>{{ platform.displayName }}</span>
-          <span
-            >{{ platform.volume }} | {{ platform.sentiment || "unknown" }}</span
-          >
+          <span class="platform-name">{{ platform.displayName }}</span>
+          <div class="platform-head-extra">
+            <span>{{ platform.volume }} 总热度</span>
+            <el-divider direction="vertical" />
+            <span>{{ platform.displaySentiment }}</span>
+          </div>
         </div>
         <div class="bar-track">
           <div
@@ -238,9 +247,17 @@ function handleSelect() {
 .platform-head {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 4px;
   font-size: 13px;
   color: #2f3340;
+}
+
+.platform-head-extra {
+  font-size: 12px;
+  color: #7d8597;
+  display: flex;
+  align-items: center;
 }
 
 .bar-track {

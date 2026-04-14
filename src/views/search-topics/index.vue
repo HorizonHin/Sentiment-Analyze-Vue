@@ -122,9 +122,6 @@ async function handleSearchTerms() {
   try {
     const res = await searchTermsByKeyword({
       keyword,
-      start_time: startDate,
-      end_time: endDate,
-      news_first_time: startDate,
       limit: 120
     });
 
@@ -189,10 +186,7 @@ async function handleBatchQueryTopics() {
     const results = await Promise.allSettled(
       keywordList.map(keyword =>
         getTopicByKeyword({
-          keyword,
-          start_time: startDate,
-          end_time: endDate,
-          news_first_time: startDate
+          keyword
         })
       )
     );

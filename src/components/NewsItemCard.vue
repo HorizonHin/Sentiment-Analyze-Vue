@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, defineAsyncComponent } from "vue";
 import type { NewsItem } from "../api/sentiment";
+import { SENTIMENT_POLARITY_MAP } from "../common/const";
 
 defineOptions({
   name: "NewsItemCard"
@@ -21,12 +22,18 @@ const sentimentTagType = computed(() => {
   const polarity = (props.item.sentiment_polarity || "").toLowerCase();
   if (polarity === "positive") return "success";
   if (polarity === "negative") return "danger";
+  if (polarity === "neutral") return "info";
   return "info";
+});
+
+const displaySentiment = computed(() => {
+  const p = (props.item.sentiment_polarity || "").toLowerCase();
+  return SENTIMENT_POLARITY_MAP[p] || SENTIMENT_POLARITY_MAP.unknown;
 });
 
 const newsLink = computed(() => props.item.url || props.item.mobile_url || "");
 
-const displayTitle = computed(() => props.item.title || "Untitled News");
+const displayTitle = computed(() => props.item.title || "无标题新闻");
 
 function handleCardClick() {
   detailModalVisible.value = true;
@@ -40,7 +47,7 @@ function handleCardClick() {
       <h3 class="title">{{ displayTitle }}</h3>
 
           <div class="header-tags">
-            <el-tag size="small" :type="sentimentTagType">{{ props.item.sentiment_polarity || "unknown" }}</el-tag>
+            <el-tag size="small" :type="sentimentTagType">{{ displaySentiment }}</el-tag>
           </div>
 
     </el-card>

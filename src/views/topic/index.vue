@@ -7,7 +7,8 @@ import {
   formatWindowHourMinute,
   getHeatChangeTagType,
   getTopicStageMeta,
-  getSentimentPolarityColor
+  getSentimentPolarityColor,
+  SENTIMENT_POLARITY_MAP
 } from "@/common/const";
 import {
   getTopicSnapshotDetail,
@@ -47,6 +48,12 @@ const sentimentTagType = computed(() => {
 });
 
 const stageMeta = computed(() => getTopicStageMeta(topicDetail.value?.stage));
+
+const displaySentiment = computed(() => {
+  const s = (topicDetail.value?.sentiment || "").toLowerCase();
+  return SENTIMENT_POLARITY_MAP[s] || SENTIMENT_POLARITY_MAP.unknown;
+});
+
 const topicDisplayTitle = computed(() => {
   const llmTitle = String(topicDetail.value?.llm_title || "").trim();
   if (llmTitle) {
@@ -214,7 +221,7 @@ watch(
               <h3>{{ topicDisplayTitle }}</h3>
               <div class="detail-tag-row">
                 <el-tag :type="sentimentTagType" effect="light">{{
-                  topicDetail.sentiment || "unknown"
+                  displaySentiment
                 }}</el-tag>
                 <el-tag :type="stageMeta.tagType" effect="plain">{{
                   stageMeta.label
@@ -227,40 +234,40 @@ watch(
           </template>
 
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="ID">{{
+            <el-descriptions-item label="话题 ID">{{
               topicDetail.id
             }}</el-descriptions-item>
-            <el-descriptions-item label="Version">{{
+            <el-descriptions-item label="版本号">{{
               topicDetail.version
             }}</el-descriptions-item>
-            <el-descriptions-item label="News Count">{{
+            <el-descriptions-item label="相关新闻数">{{
               topicDetail.news_count
             }}</el-descriptions-item>
-            <el-descriptions-item label="Total Weight">{{
+            <el-descriptions-item label="总热度权重">{{
               topicDetail.total_weight.toFixed(2)
             }}</el-descriptions-item>
-            <el-descriptions-item label="Heat Change">{{
+            <el-descriptions-item label="热度变化">{{
               heatChangeText
             }}</el-descriptions-item>
-            <el-descriptions-item label="Stage">{{
+            <el-descriptions-item label="发展阶段">{{
               stageMeta.label
             }}</el-descriptions-item>
-            <el-descriptions-item label="Hour Minute">
+            <el-descriptions-item label="窗口粒度">
               {{ formatWindowHourMinute(topicDetail.window_size) }}
             </el-descriptions-item>
-            <el-descriptions-item label="Sentiment">{{
-              topicDetail.sentiment || "-"
+            <el-descriptions-item label="情感极性">{{
+              displaySentiment
             }}</el-descriptions-item>
-            <el-descriptions-item label="Start Time">
+            <el-descriptions-item label="起始分析时间">
               {{ formatDateTimeYmdHm(topicDetail.start_time) }}
             </el-descriptions-item>
-            <el-descriptions-item label="End Time">
+            <el-descriptions-item label="截止分析时间">
               {{ formatDateTimeYmdHm(topicDetail.end_time) }}
             </el-descriptions-item>
-            <el-descriptions-item label="Created At">
+            <el-descriptions-item label="首次检出时间">
               {{ formatDateTimeYmdHm(topicDetail.created_at) }}
             </el-descriptions-item>
-            <el-descriptions-item label="Updated At">
+            <el-descriptions-item label="最后更新时间">
               {{ formatDateTimeYmdHm(topicDetail.updated_at) }}
             </el-descriptions-item>
           </el-descriptions>
@@ -268,14 +275,14 @@ watch(
 
         <el-card class="detail-card" shadow="never">
           <template #header>
-            <div class="detail-title">Heat Timeline</div>
+            <div class="detail-title">热度趋势分析</div>
           </template>
           <TopicHeatTimelineBarChart :timeline="topicTimeline" />
         </el-card>
 
         <el-card class="detail-card" shadow="never">
           <template #header>
-            <div class="detail-title">Platform Distribution</div>
+            <div class="detail-title">各平台分布情况</div>
           </template>
           <div v-if="platformBars.length" class="platform-bars">
             <div
@@ -286,8 +293,12 @@ watch(
               <div class="bar-head">
                 <span class="platform-name">{{ item.displayName }}</span>
                 <span class="platform-meta">
-                  {{ item.volume }} | {{ item.sentiment || "unknown" }} |
-                  {{ (item.ratio * 100).toFixed(2) }}%
+                  总热度: {{ item.volume }} || 情感偏向:
+                  {{
+                    SENTIMENT_POLARITY_MAP[item.sentiment?.toLowerCase()] ||
+                    SENTIMENT_POLARITY_MAP.unknown
+                  }}
+                  || 情感占比: {{ (item.ratio * 100).toFixed(2) }}%
                 </span>
               </div>
               <div class="bar-track">
@@ -301,11 +312,11 @@ watch(
               </div>
             </div>
           </div>
-          <el-empty v-else description="暂无平台分布数据" />
+          <el-empty v-else description="暂无平台分布数据转换" />
         </el-card>
 
         <div class="news-section-header">
-          <div class="detail-title news-title">Rank Data (NewsPanel)</div>
+          <div class="detail-title news-title">排名数据 (新闻列表)</div>
         </div>
         <NewsPanel :loading="loading" :groups="newsGroups" />
       </template>

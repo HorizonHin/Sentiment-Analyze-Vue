@@ -47,11 +47,14 @@ const getScoreStyle = (score: number) => {
           <el-tag :type="getRiskLevelMeta(risk.risk_level).type as any" size="small" effect="plain" round>
             {{ getRiskLevelMeta(risk.risk_level).label }}
           </el-tag>
+          <span class="risk-time ml-2">{{ formatDateTimeYmdHm(risk.occurred_at) }}</span>
           <span class="risk-score-val" :style="getScoreStyle(risk.risk_score)">
             {{ risk.risk_score }}
           </span>
         </div>
-        <div class="risk-reason">{{ risk.reason }}</div>
+        <el-tooltip :content="risk.reason" placement="top" effect="dark">
+          <div class="risk-reason truncate">{{ risk.reason }}</div>
+        </el-tooltip>
       </div>
       
       <div v-for="audit in audits" :key="audit.occurred_at" class="risk-badge audit-badge">
@@ -62,13 +65,16 @@ const getScoreStyle = (score: number) => {
           </span>
           <el-divider direction="vertical" />
           <el-tag type="danger" size="small" effect="dark" round>高危</el-tag>
+          <span class="risk-time ml-2">{{ formatDateTimeYmdHm(audit.occurred_at) }}</span>
         </div>
         <div class="audit-flow">
           <span class="old-name">{{ audit.old_topic }}</span>
           <el-icon class="arrow"><Right /></el-icon>
           <span class="new-name">{{ audit.topic_name }}</span>
         </div>
-        <div class="risk-reason">策略原因: {{ audit.reason }}</div>
+        <el-tooltip :content="audit.reason" placement="top" effect="dark">
+          <!-- <div class="risk-reason truncate">策略原因: {{ audit.reason }}</div> -->
+        </el-tooltip>
       </div>
     </div>
 
@@ -123,6 +129,11 @@ const getScoreStyle = (score: number) => {
   font-weight: 600;
 }
 
+.risk-time {
+  font-size: 11px;
+  color: var(--el-text-color-placeholder);
+}
+
 .risk-score-val {
   margin-left: auto;
   font-family: "Oswald", sans-serif;
@@ -151,6 +162,13 @@ const getScoreStyle = (score: number) => {
   background: var(--el-fill-color-extra-light);
   border-radius: 4px;
   border-left: 3px solid var(--el-color-danger-light-3);
+  cursor: help;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .audit-flow {
@@ -189,5 +207,8 @@ const getScoreStyle = (score: number) => {
 
 .ml-1 {
   margin-left: 4px;
+}
+.ml-2 {
+  margin-left: 8px;
 }
 </style>

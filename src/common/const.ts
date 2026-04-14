@@ -3,8 +3,17 @@ export const SENTIMENT_POLARITY_COLORS = {
   negative: "#f56c6c",
   neutral: "#409eff",
   mixed: "#e6a23c",
-  other: "#909399"
+  other: "#909399",
+  unknown: "#909399"
 } as const;
+
+export const SENTIMENT_POLARITY_MAP: Record<string, string> = {
+  positive: "正面",
+  negative: "负面",
+  neutral: "中性",
+  mixed: "混合",
+  unknown: "未知"
+};
 
 export const API_TIMESTAMP_UNIT = "seconds";
 

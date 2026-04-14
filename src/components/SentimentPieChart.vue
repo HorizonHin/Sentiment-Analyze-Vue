@@ -9,7 +9,7 @@ import {
   watch
 } from "vue";
 import type * as echarts from "echarts";
-import { getSentimentPolarityColor } from "../common/const";
+import { getSentimentPolarityColor, SENTIMENT_POLARITY_MAP } from "../common/const";
 import type { NewsItem } from "../api/sentiment";
 
 defineOptions({
@@ -51,16 +51,10 @@ function renderChart() {
     chartInstance.dispose();
   }
 
-  const polarityMap = {
-    positive: "正面",
-    negative: "负面",
-    neutral: "中性"
-  };
-
   chartInstance = $echarts.init(chartRef.value);
   chartInstance.setOption({
     title: {
-      text: polarityMap[props.item.sentiment_polarity?.toLowerCase()] || "情感倾向",
+      text: SENTIMENT_POLARITY_MAP[props.item.sentiment_polarity?.toLowerCase()] || "情感倾向",
       left: "center",
       textStyle: {
         fontSize: 14,

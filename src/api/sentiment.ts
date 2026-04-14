@@ -116,25 +116,18 @@ export type TopicSnapshotDetailQuery = {
 
 export type SearchTermsByKeywordQuery = {
   keyword: string;
-  start_time: string | number | Date;
-  end_time: string | number | Date;
-  news_first_time?: string | number | Date;
   limit?: number;
 };
 
 export type SearchTermsByKeywordData = {
   keyword: string;
   keywords: NewsKeyword[];
-  entities: NewsEntity[];
 };
 
 export type SearchTermsByKeywordResponse = ApiResult<SearchTermsByKeywordData>;
 
 export type TopicByKeywordQuery = {
   keyword: string;
-  start_time?: string | number | Date;
-  end_time?: string | number | Date;
-  news_first_time?: string | number | Date;
 };
 
 export type TopicByKeywordResponse = ApiResult<Topic>;
@@ -206,11 +199,6 @@ export const searchTermsByKeyword = (query: SearchTermsByKeywordQuery) => {
   return http.request<SearchTermsByKeywordResponse>("get", "/api/news/search-terms", {
     params: {
       keyword: query.keyword,
-      start_time: formatApiTimestamp(query.start_time),
-      end_time: formatApiTimestamp(query.end_time),
-      news_first_time: query.news_first_time
-        ? formatApiTimestamp(query.news_first_time)
-        : undefined,
       limit: query.limit
     }
   });
@@ -222,12 +210,7 @@ export const searchTermsByKeyword = (query: SearchTermsByKeywordQuery) => {
 export const getTopicByKeyword = (query: TopicByKeywordQuery) => {
   return http.request<TopicByKeywordResponse>("get", "/api/topics/by-keyword", {
     params: {
-      keyword: query.keyword,
-      start_time: query.start_time ? formatApiTimestamp(query.start_time) : undefined,
-      end_time: query.end_time ? formatApiTimestamp(query.end_time) : undefined,
-      news_first_time: query.news_first_time
-        ? formatApiTimestamp(query.news_first_time)
-        : undefined
+      keyword: query.keyword
     }
   });
 };
